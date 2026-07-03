@@ -287,6 +287,9 @@ textarea{font-family:inherit}
 .banco-msg a{color:var(--rose-escuro);font-weight:600}
 .btn-banco{width:100%;padding:11px;border:1.5px dashed var(--rose-claro);border-radius:12px;color:var(--rose-escuro);font-weight:600;font-size:13px;background:#fff;margin-bottom:12px}
 .sec-div{margin:30px 2px 14px;padding-top:20px;border-top:2px solid var(--rose-claro);font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--rose-escuro)}
+.subtabs{display:flex;gap:6px;margin:2px 0 18px;background:var(--creme);border:1px solid var(--linha);border-radius:100px;padding:4px}
+.subtab{flex:1;padding:11px;border-radius:100px;font-weight:600;font-size:13.5px;color:var(--cinza);text-align:center;transition:all .15s}
+.subtab.on{background:#fff;color:var(--rose-escuro);box-shadow:0 4px 12px -6px rgba(0,0,0,.2)}
 .btn-add.esgotado{background:#c9c6c2;color:#fff}
 .badge-est{position:absolute;bottom:10px;left:10px;background:rgba(23,19,15,.82);color:#fff;font-size:11px;font-weight:600;padding:5px 10px;border-radius:100px;z-index:2}
 .badge-est.esgot{background:#8c8781}
@@ -368,7 +371,7 @@ textarea{font-family:inherit}
 <div class="toast" id="toast"></div>
 
 <script>
-let CONFIG, working, VENDEDORA, MODO='especial', mainView='campanhas', campSel=null, zoomId=null;
+let CONFIG, working, VENDEDORA, MODO='especial', mainView='campanhas', campSel=null, subAba='produtos', zoomId=null;
 const carrinho={}, galeriaIdx={};
 let querCatalogo=null, numeroAtual=null, dashDados=null, dashFiltro='todos';
 
@@ -465,14 +468,15 @@ function renderMain(){
   const aj=document.getElementById('edAjuda'),ct=document.getElementById('tabConteudo');
   if(mainView==='config'){aj.innerHTML='Coisas que valem para <b>todas as campanhas</b>: logo, favicon, vendedoras, brinde e integrações.<span class="salvo-tag">✓ salvamento automático ligado</span>';ct.innerHTML=configHTML();iniciarConfig();}
   else if(mainView==='dash'){aj.innerHTML='Acompanhe seus pedidos e vendas. Precisa conectar sua fonte de dados na aba Configurações.<span class="salvo-tag">✓ salvamento automático ligado</span>';ct.innerHTML='<div class="dash-filtros"><button class="'+(dashFiltro==='todos'?'on':'')+'" onclick="setDashFiltro(\'todos\')">Tudo</button><button class="'+(dashFiltro==='30'?'on':'')+'" onclick="setDashFiltro(\'30\')">30 dias</button><button class="'+(dashFiltro==='7'?'on':'')+'" onclick="setDashFiltro(\'7\')">7 dias</button></div><div style="text-align:right;margin-bottom:12px"><button class="btn-atualizar" onclick="carregarDashboard()">↻ Atualizar</button></div><div id="dashBody"></div>';carregarDashboard();}
-  else{aj.innerHTML='Crie quantas campanhas quiser. Cada uma vira um link/arquivo próprio. As já existentes continuam intactas.<span class="salvo-tag">✓ salvamento automático ligado</span>';if(campSel==null){ct.innerHTML=campListHTML();}else{ct.innerHTML=campEditorHTML(campSel);renderProdList();renderFaixaList();}}
+  else{aj.innerHTML='Crie quantas campanhas quiser. Cada uma vira um link/arquivo próprio. As já existentes continuam intactas.<span class="salvo-tag">✓ salvamento automático ligado</span>';if(campSel==null){ct.innerHTML=campListHTML();}else{ct.innerHTML=campEditorHTML(campSel);if(subAba==='produtos'){renderProdList();}else{renderFaixaList();}}}
 }
 
 /* ----- CAMPANHAS: lista ----- */
 function campListHTML(){
   return working.campanhas.map((c,i)=>`<div class="camp-card"><h3>${escH(c.nome)}</h3><div class="meta">link: ${c.slug}.html · ${c.produtos.length} peça(s)</div><div class="acoes"><button class="ac-editar" onclick="editarCampanha(${i})">✏️ Editar</button><button class="ac-dup" onclick="duplicarCampanha(${i})">⧉ Duplicar</button>${working.campanhas.length>1?`<button class="ac-del" onclick="excluirCampanha(${i})">🗑 Excluir</button>`:''}</div></div>`).join("")+`<button class="btn-nova" onclick="novaCampanha()">+ Nova campanha</button>`;
 }
-function editarCampanha(i){campSel=i;renderMain();window.scrollTo(0,0);}
+function editarCampanha(i){campSel=i;subAba='produtos';renderMain();window.scrollTo(0,0);}
+function setSubAba(a){subAba=a;renderMain();window.scrollTo(0,0);}
 function novaCampanha(){const base='Campanha '+(working.campanhas.length+1);let slug=slugify(base);const usados=working.campanhas.map(c=>c.slug);while(usados.includes(slug))slug+='-2';working.campanhas.push({slug,nome:base,url:"",ogTitulo:"Estação da Prata",ogDescricao:"",banner:"",texto:{selo:"",titulo:base,desconto:"ATÉ 49% DE DESCONTO!!",sub:""},produtos:[],brinde:{ativo:false,nome:"Brinde especial",valorMinimo:1000,img:"",regras:""},faixas:[]});campSel=working.campanhas.length-1;renderMain();window.scrollTo(0,0);}
 function duplicarCampanha(i){const nova=clone(working.campanhas[i]);nova.nome=nova.nome+' (cópia)';let slug=slugify(nova.nome);const usados=working.campanhas.map(c=>c.slug);while(usados.includes(slug))slug+='-2';nova.slug=slug;working.campanhas.splice(i+1,0,nova);renderMain();toast('Campanha duplicada! ⧉');}
 function excluirCampanha(i){if(working.campanhas.length<=1){toast('Precisa ter pelo menos uma campanha.');return;}if(confirm('Excluir a campanha "'+working.campanhas[i].nome+'"? As outras não são afetadas.')){working.campanhas.splice(i,1);campSel=null;renderMain();}}
@@ -482,17 +486,22 @@ function campEditorHTML(i){
   const c=working.campanhas[i],t=c.texto;
   const outras=working.campanhas.map((x,j)=>j===i?'':`<option value="${j}">${escH(x.nome)}</option>`).join("");
   const temOutras=working.campanhas.length>1;
-  return `<button class="btn-voltar" onclick="voltarLista()">← Todas as campanhas</button>
+  const back=`<button class="btn-voltar" onclick="voltarLista()">← Todas as campanhas</button>`;
+  const subtabs=`<div class="subtabs"><button class="subtab ${subAba==='produtos'?'on':''}" onclick="setSubAba('produtos')">💍 Produtos</button><button class="subtab ${subAba==='config'?'on':''}" onclick="setSubAba('config')">⚙️ Configurações</button></div>`;
+  if(subAba==='produtos'){
+    return back+subtabs+`
+    ${temOutras?`<div class="copy-row"><span style="font-size:12px;color:var(--cinza)">Copiar peças de:</span><select class="mini-sel" id="copySel"><option value="">escolher...</option>${outras}</select><button class="btn-copy" onclick="copiarPecas(${i})">⧉ peças</button></div>`:''}
+    <div class="sec-titulo">💍 Peças das ${escH(c.nome)}</div>
+    <div class="desc-geral"><span class="tt">💰 Aplicar desconto em todas (do preço cheio)</span><input type="number" id="descGeral" placeholder="%"><button onclick="aplicarDescontoGeral()">Aplicar</button></div>
+    <div id="prodList"></div>
+    <button class="btn-add-prod" onclick="addProduto()">+ Adicionar peça</button>`;
+  }
+  return back+subtabs+`
   <div class="ed-bloco"><h2>🏷️ Nome & link</h2>
     <div class="campo"><label>Nome da campanha</label><input value="${escA(c.nome)}" oninput="working.campanhas[${i}].nome=this.value"></div>
-    <div class="campo"><label>Apelido do link (slug)</label><div class="dica">Vira o nome do arquivo: ${escH(c.slug)}.html — evite mudar depois de divulgar.</div><input value="${escA(c.slug)}" oninput="working.campanhas[${i}].slug=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')"></div>
+    <div class="campo"><label>Apelido do link (slug)</label><div class="dica">Vira o arquivo: ${escH(c.slug)}.html — evite mudar depois de divulgar.</div><input value="${escA(c.slug)}" oninput="working.campanhas[${i}].slug=this.value.toLowerCase().replace(/[^a-z0-9-]/g,'')"></div>
   </div>
-  ${temOutras?`<div class="copy-row"><span style="font-size:12px;color:var(--cinza)">Copiar de:</span><select class="mini-sel" id="copySel"><option value="">escolher...</option>${outras}</select><button class="btn-copy" onclick="copiarPecas(${i})">⧉ peças</button><button class="btn-copy" onclick="copiarTextos(${i})">⧉ textos</button></div>`:''}
-  <div class="sec-titulo">💍 Peças desta campanha</div>
-  <div class="desc-geral"><span class="tt">💰 Aplicar desconto em todas (do preço cheio)</span><input type="number" id="descGeral" placeholder="%"><button onclick="aplicarDescontoGeral()">Aplicar</button></div>
-  <div id="prodList"></div>
-  <button class="btn-add-prod" onclick="addProduto()">+ Adicionar peça</button>
-  <div class="sec-div">⚙️ Configurações da campanha</div>
+  ${temOutras?`<div class="copy-row"><span style="font-size:12px;color:var(--cinza)">Copiar textos de:</span><select class="mini-sel" id="copySel"><option value="">escolher...</option>${outras}</select><button class="btn-copy" onclick="copiarTextos(${i})">⧉ textos</button></div>`:''}
   <div class="ed-bloco"><h2>🎨 Estilo</h2>
     <div class="linha2"><div class="campo"><label>Cor de fundo</label><input type="color" value="${c.corFundo||'#faf8f7'}" oninput="working.campanhas[${i}].corFundo=this.value"></div><div class="campo"><label>Cor do -% na foto</label><input type="color" value="${c.corSelo||'#b76e79'}" oninput="working.campanhas[${i}].corSelo=this.value"></div></div>
     <div class="linha2"><div class="campo"><label>Emoji do brinde</label><input value="${escA(c.emojiBrinde)}" maxlength="4" oninput="working.campanhas[${i}].emojiBrinde=this.value" style="text-align:center;font-size:20px"></div><div class="campo"><label>Avisar "últimas" quando estoque ≤</label><input type="number" value="${c.estoqueBaixo}" oninput="working.campanhas[${i}].estoqueBaixo=parseInt(this.value)||0"></div></div>

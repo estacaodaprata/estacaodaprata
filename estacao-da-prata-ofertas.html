@@ -469,6 +469,39 @@ textarea{font-family:inherit}
 .chk{font-size:14px}
 .sec-titulo{font-size:22px}
 .cores-grid{gap:10px}
+/* painel premium */
+.ed-topo{background:linear-gradient(180deg,#fff,#fdfbfb);border-bottom:1px solid var(--linha);padding:18px 20px 16px;display:flex;align-items:center;justify-content:space-between;position:relative}
+.ed-topo::after{content:'';position:absolute;left:0;right:0;bottom:0;height:2px;background:var(--prata-grad)}
+.ed-wordmark{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:22px;letter-spacing:.14em;text-transform:uppercase;background:linear-gradient(135deg,#5a554f,#17130f 45%,#6f6a64);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;line-height:1.1}
+.ed-submarca{font-size:9px;letter-spacing:.3em;text-transform:uppercase;color:var(--prata-3);margin-top:3px}
+.ed-saud{font-family:'Cormorant Garamond',serif;font-size:16px;color:var(--rose-escuro);font-style:italic}
+.hero-resumo{display:flex;align-items:center;justify-content:space-around;background:linear-gradient(135deg,#fff,#fdf6f7);border:1px solid var(--rose-claro);border-radius:18px;padding:20px 14px;margin-bottom:20px;box-shadow:0 14px 34px -24px rgba(156,87,99,.5)}
+.hr-item{text-align:center;flex:1}
+.hr-num{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;line-height:1;color:var(--preto)}
+.hr-lbl{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--cinza);margin-top:4px}
+.hr-sep{width:1px;align-self:stretch;background:var(--linha);margin:4px 0}
+.lista-titulo{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;margin:0 2px 12px}
+.camp-card2{display:flex;gap:14px;background:#fff;border:1px solid var(--linha);border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 10px 26px -20px rgba(0,0,0,.4);transition:transform .18s,box-shadow .18s}
+.camp-card2:hover{transform:translateY(-2px);box-shadow:0 16px 34px -22px rgba(0,0,0,.45)}
+.cc-capa{width:74px;height:74px;border-radius:12px;flex-shrink:0;overflow:hidden;background:var(--prata-grad);display:flex;align-items:center;justify-content:center}
+.cc-capa img{width:100%;height:100%;object-fit:cover}
+.cc-body{flex:1;min-width:0}
+.cc-nome{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;line-height:1.15}
+.cc-meta{font-size:12px;color:var(--cinza);margin-top:2px}
+.cc-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+.cc-tag{font-size:13px;background:var(--creme);border:1px solid var(--linha);border-radius:100px;padding:2px 8px;line-height:1.4}
+.cc-acoes{display:flex;gap:6px;margin-top:11px;flex-wrap:wrap}
+.cc-acoes button{font-size:12.5px;font-weight:600;border-radius:100px;padding:7px 13px}
+.ac-loja{background:#fff;border:1.5px solid var(--rose-claro);color:var(--rose-escuro)}
+.grafico-dias{display:flex;align-items:flex-end;gap:8px;height:120px;padding-top:8px}
+.gd-col{flex:1;display:flex;flex-direction:column;align-items:center;height:100%}
+.gd-bar-wrap{flex:1;width:100%;display:flex;align-items:flex-end;justify-content:center}
+.gd-bar{width:62%;min-height:3px;background:var(--rose-grad);border-radius:6px 6px 0 0;transition:height .3s}
+.gd-n{font-size:11px;color:var(--preto-suave);font-weight:600;margin-top:4px;min-height:14px}
+.gd-lbl{font-size:10px;color:var(--cinza);text-transform:capitalize;margin-top:2px}
+.kpi{background:linear-gradient(135deg,#fff,#fdfbfb);box-shadow:0 10px 26px -22px rgba(0,0,0,.4)}
+.kpi .v{font-size:28px}
+.tabs{box-shadow:0 4px 14px -12px rgba(0,0,0,.4)}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto}}
 </style>
 </head>
@@ -518,7 +551,7 @@ textarea{font-family:inherit}
 <div id="editor">
   <div class="login-tela" id="loginTela"><div class="login-card"><div class="wordmark">Estação da Prata</div><p>Área de edição · digite a senha</p><div class="login-erro" id="loginErro"></div><input type="password" id="loginSenha" placeholder="senha" onkeydown="if(event.key==='Enter')checarSenha()"><button onclick="checarSenha()">Entrar</button></div></div>
   <div class="save-status" id="saveStatus" style="opacity:0"></div>
-  <div class="ed-topo"><h1>Painel de edição</h1><p>Seus clientes não veem esta tela.</p></div>
+  <div class="ed-topo"><div class="ed-marca"><div class="ed-wordmark">Estação da Prata</div><div class="ed-submarca">Painel · Prata 925 · Atacado</div></div><div class="ed-saud" id="edSaud"></div></div>
   <div class="tabs">
     <button class="tab" id="tabCampanhas" onclick="setMain('campanhas')">🎯 Campanhas</button>
     <button class="tab" id="tabConfig" onclick="setMain('config')">⚙️ Configurações</button>
@@ -673,9 +706,10 @@ function renderMain(){
 /* ----- CAMPANHAS: lista ----- */
 function campListHTML(){
   const busca=`<div class="camp-busca"><input placeholder="🔎 Buscar campanha" value="${escA(campBusca||'')}" oninput="campBusca=this.value;const el=document.getElementById('campCards');if(el)el.innerHTML=campCardsHTML()"></div>`;
-  return (working.campanhas.length>3?busca:'')+`<div id="campCards">${campCardsHTML()}</div>`+`<button class="btn-nova" onclick="novaCampanha()">+ Nova campanha</button>`;
+  return resumoHeroHTML()+(working.campanhas.length>3?busca:'')+`<div id="campCards">${campCardsHTML()}</div>`+`<button class="btn-nova" onclick="novaCampanha()">+ Nova campanha</button>`;
 }
-function campCardsHTML(){const b=(campBusca||'').toLowerCase();return working.campanhas.map((c,i)=>({c,i})).filter(o=>!b||(o.c.nome||'').toLowerCase().includes(b)).map(({c,i})=>`<div class="camp-card"><h3>${escH(c.nome)}</h3><div class="meta">${c.slug}.html · ${c.produtos.length} peça(s)</div><div class="acoes"><button class="ac-editar" onclick="editarCampanha(${i})">Editar</button><button class="ac-dup" onclick="duplicarCampanha(${i})">Duplicar</button><button class="ac-loja" onclick="preverCampanha('${c.slug}')">Ver loja</button>${working.campanhas.length>1?`<button class="ac-del" onclick="excluirCampanha(${i})">Excluir</button>`:''}</div></div>`).join("");}
+function resumoHeroHTML(){const totPecas=working.campanhas.reduce((s,c)=>s+(c.produtos||[]).length,0);const totCamp=working.campanhas.length;return `<div class="hero-resumo"><div class="hr-item"><div class="hr-num">${totCamp}</div><div class="hr-lbl">campanhas</div></div><div class="hr-sep"></div><div class="hr-item"><div class="hr-num">${totPecas}</div><div class="hr-lbl">peças</div></div><div class="hr-sep"></div><div class="hr-item"><div class="hr-num" id="hrPedidos">·</div><div class="hr-lbl">pedidos ativos</div></div></div><div class="lista-titulo">Suas campanhas</div>`;}
+function campCardsHTML(){const b=(campBusca||'').toLowerCase();return working.campanhas.map((c,i)=>({c,i})).filter(o=>!b||(o.c.nome||'').toLowerCase().includes(b)).map(({c,i})=>{const capa=(c.produtos||[]).map(p=>(p.imgs&&p.imgs[0])).find(Boolean);const nP=(c.produtos||[]).length;const dest=(c.produtos||[]).filter(p=>p.destaque).length;const esg=(c.produtos||[]).filter(p=>estoqueTotalPeca(p)<=0).length;const tags=[c.brinde&&c.brinde.ativo?'🎁':'',(c.faixas&&c.faixas.length)?'📈':'',c.baixaEstoque?'📦':'',c.popup&&c.popup.ativo?'🪟':'',c.aviso&&c.aviso.ativo?'📢':''].filter(Boolean).map(t=>`<span class="cc-tag">${t}</span>`).join('');return `<div class="camp-card2"><div class="cc-capa">${capa?`<img src="${capa}">`:diamante('#c9ccd1',26)}</div><div class="cc-body"><div class="cc-nome">${escH(c.nome)}</div><div class="cc-meta">${c.slug}.html · ${nP} peça(s)${dest?` · ⭐${dest}`:''}${esg?` · <span style='color:#a53838'>${esg} esg.</span>`:''}</div><div class="cc-tags">${tags}</div><div class="cc-acoes"><button class="ac-editar" onclick="editarCampanha(${i})">Editar</button><button class="ac-loja" onclick="preverCampanha('${c.slug}')">Ver loja</button><button class="ac-dup" onclick="duplicarCampanha(${i})">⧉</button>${working.campanhas.length>1?`<button class="ac-del" onclick="excluirCampanha(${i})">🗑</button>`:''}</div></div></div>`;}).join("");}
 function preverCampanha(slug){verPreview();aplicarPreview(slug);}
 let VENDIDOS_ED={};
 async function carregarVendidosPainel(slug){VENDIDOS_ED={};try{const r=await fetch(`${SUPA_URL}/rest/v1/pedidos?campanha=eq.${encodeURIComponent(slug)}&status=eq.ativo&select=itens`,{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});if(!r.ok)return;const arr=await r.json();arr.forEach(pd=>{(pd.itens||[]).forEach(it=>{const k=(it.id!=null?it.id:(it.codigo||it.nome))+'#'+(it.numero||'');VENDIDOS_ED[k]=(VENDIDOS_ED[k]||0)+(Number(it.qtd)||0);});});if(campSel!=null&&subAba==='produtos'&&prodSel==null)renderProdLinhas();}catch(e){}}
@@ -916,6 +950,7 @@ function dashVazioHTML(){return `<div class="dash-vazio">📊 <b>Ainda não há 
 async function carregarDashboard(){const box=document.getElementById('dashBody');if(!box)return;box.innerHTML='<p style="text-align:center;color:var(--cinza);padding:30px">Carregando pedidos...</p>';try{const r=await fetch(`${SUPA_URL}/rest/v1/pedidos?select=*&order=criado_em.desc`,{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});if(!r.ok)throw new Error('http '+r.status);const arr=await r.json();dashDados=arr.map(p=>({id:p.id,status:p.status||'ativo',data:p.criado_em,campanha:p.campanha,vendedora:p.vendedora,total:Number(p.total)||0,brinde:!!p.brinde,catalogo:p.catalogo,itens:p.itens||[]}));box.innerHTML=dashRender();}catch(e){box.innerHTML='<div class="dash-erro">Não consegui carregar os pedidos agora.</div>'+dashVazioHTML();}}
 async function cancelarPedido(id){if(!confirm('Cancelar este pedido? As peças voltam ao estoque.'))return;try{await fetch(`${SUPA_URL}/rest/v1/pedidos?id=eq.${id}`,{method:'PATCH',headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({status:'cancelado'})});}catch(e){}carregarDashboard();}
 async function reativarPedido(id){try{await fetch(`${SUPA_URL}/rest/v1/pedidos?id=eq.${id}`,{method:'PATCH',headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'return=minimal'},body:JSON.stringify({status:'ativo'})});}catch(e){}carregarDashboard();}
+function graficoDiasHTML(ped){const dias=[];const hoje=new Date();for(let k=6;k>=0;k--){const d=new Date(hoje);d.setDate(hoje.getDate()-k);const key=d.toISOString().slice(0,10);dias.push({key,lbl:d.toLocaleDateString('pt-BR',{weekday:'short'}).replace('.',''),n:0,v:0});}const map={};dias.forEach(d=>map[d.key]=d);ped.forEach(p=>{const k=(p.data||'').slice(0,10);if(map[k]){map[k].n++;map[k].v+=Number(p.total)||0;}});const max=Math.max(1,...dias.map(d=>d.n));const barras=dias.map(d=>`<div class="gd-col"><div class="gd-bar-wrap"><div class="gd-bar" style="height:${Math.round(d.n/max*100)}%" title="${d.n} pedido(s) · ${fmt(d.v)}"></div></div><div class="gd-n">${d.n||''}</div><div class="gd-lbl">${d.lbl}</div></div>`).join('');return `<div class="dash-sec"><h3>📈 Pedidos nos últimos 7 dias</h3><div class="grafico-dias">${barras}</div></div>`;}
 function dashRender(){
   let base=dashDados||[];
   if(dashFiltro!=='todos'){const dias=parseInt(dashFiltro);const lim=Date.now()-dias*864e5;base=base.filter(p=>{const t=Date.parse(p.data);return isNaN(t)?true:t>=lim;});}
@@ -938,6 +973,7 @@ function dashRender(){
     <div class="kpi"><div class="v">${fmt(ticket)}</div><div class="l">Ticket médio</div></div>
     <div class="kpi"><div class="v">${brindes}</div><div class="l">Brindes resgatados</div></div>
   </div>
+  ${graficoDiasHTML(ped)}
   <div class="dash-sec"><h3>🏆 Peças mais vendidas</h3>${bars(pecas,' un')}</div>
   <div class="dash-sec"><h3>🎯 Pedidos por campanha</h3>${bars(porCamp)}</div>
   <div class="dash-sec"><h3>👩 Pedidos por vendedora</h3>${bars(porVend)}</div>
@@ -945,7 +981,8 @@ function dashRender(){
   <div class="dash-sec"><h3>🧾 Últimos pedidos</h3><table class="dash-tbl"><thead><tr><th>Data</th><th>Vendedora</th><th>Campanha</th><th>Itens</th><th>Total</th><th></th></tr></thead><tbody>${tbl}</tbody></table></div>`;
 }
 
-function iniciarEditor(){setMain('campanhas');}
+function saudacao(){const h=new Date().getHours();return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite';}
+async function iniciarEditor(){const s=document.getElementById('edSaud');if(s)s.textContent=saudacao()+' ✨';setMain('campanhas');try{const r=await fetch(`${SUPA_URL}/rest/v1/pedidos?status=eq.ativo&select=id`,{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,Prefer:'count=exact',Range:'0-0'}});const cr=r.headers.get('content-range');const tot=cr&&cr.includes('/')?cr.split('/')[1]:'0';const el=document.getElementById('hrPedidos');if(el)el.textContent=tot;}catch(e){}}
 
 /* ----- preview ----- */
 function aplicarPreview(slug){MODO=slug;CONFIG=clone(working);filtroCat='';ordem='';VENDIDOS={};for(const k in carrinho)delete carrinho[k];for(const k in galeriaIdx)delete galeriaIdx[k];resolverVendedora();aplicarLogo();aplicarTextos(slug);aplicarTema(slug);renderVitrine(slug);renderAviso();aplicarBrindeHome();aplicarHead(CONFIG,slug);renderGrade();atualizar();iniciarPopup();[...document.querySelectorAll('#barraPreview .mb')].forEach(b=>b.classList.toggle('on',b.dataset.m===slug));}

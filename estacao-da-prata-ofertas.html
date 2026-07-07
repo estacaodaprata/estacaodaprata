@@ -269,17 +269,22 @@ textarea{font-family:inherit}
 .banco-cfg b{color:var(--rose-escuro)}
 .banco-overlay{position:fixed;inset:0;z-index:85;background:rgba(23,19,15,.55);opacity:0;visibility:hidden;transition:opacity .2s}
 .banco-overlay.aberto{opacity:1;visibility:visible}
-.banco-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.96);z-index:86;background:#fff;border-radius:18px;width:92%;max-width:520px;max-height:82vh;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:all .2s;box-shadow:var(--sombra)}
+.banco-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.96);z-index:86;background:#fff;border-radius:18px;width:94%;max-width:760px;max-height:88vh;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:all .2s;box-shadow:var(--sombra)}
 .banco-modal.aberto{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
 .banco-topo{padding:16px 18px 12px;border-bottom:1px solid var(--linha);display:flex;align-items:center;justify-content:space-between}
 .banco-topo h3{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600}
 .banco-corpo{overflow-y:auto;padding:14px;flex:1}
-.banco-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.banco-item{aspect-ratio:1/1;border-radius:10px;overflow:hidden;position:relative;background:var(--prata-grad);cursor:pointer;border:2px solid transparent}
+.banco-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.banco-cel{display:flex;flex-direction:column;gap:5px}
+.banco-item{aspect-ratio:1/1;border-radius:12px;overflow:hidden;position:relative;background:var(--prata-grad);cursor:pointer;border:3px solid transparent;transition:border-color .15s}
 .banco-item img{width:100%;height:100%;object-fit:cover}
 .banco-item.sel{border-color:var(--rose)}
-.banco-item .ck{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:var(--rose);color:#fff;font-size:13px;display:none;align-items:center;justify-content:center}
+.banco-item .ck{position:absolute;top:6px;right:6px;width:26px;height:26px;border-radius:50%;background:var(--rose);color:#fff;font-size:15px;display:none;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,.3)}
 .banco-item.sel .ck{display:flex}
+.banco-nome{font-size:11.5px;color:var(--preto-suave);text-align:center;line-height:1.25;word-break:break-word;font-weight:500}
+.banco-busca{margin-bottom:12px}
+.banco-busca input{width:100%;padding:11px 13px;border:1px solid var(--linha);border-radius:10px;font-size:14px;background:var(--creme)}
+.banco-cont{font-size:11px;color:var(--cinza);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px}
 .banco-pe{padding:12px 18px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--linha)}
 .banco-add-full{width:100%;padding:14px;border-radius:100px;background:var(--rose-grad);color:#fff;font-weight:600;font-size:14px}
 .banco-add-full:disabled{opacity:.45}
@@ -659,7 +664,7 @@ async function enviarBrindeCamp(inp){if(!inp.files[0])return;working.campanhas[c
 function renderFaixaList(){const alvo=document.getElementById('faixaList');if(!alvo)return;const fx=working.campanhas[campSel].faixas;alvo.innerHTML=fx.length?fx.map((f,j)=>`<div class="faixa-row"><input type="number" placeholder="Acima de R$" value="${f.minimo||''}" oninput="working.campanhas[${campSel}].faixas[${j}].minimo=parseFloat(this.value)||0"><input type="number" placeholder="% off" value="${f.percentual||''}" oninput="working.campanhas[${campSel}].faixas[${j}].percentual=parseFloat(this.value)||0"><button class="rmf" onclick="removerFaixa(${j})">×</button></div>`).join(''):'<div class="prod-vazio" style="margin-bottom:10px">Nenhuma faixa ainda. Ex: acima de 300 → 5%.</div>';}
 function addFaixa(){working.campanhas[campSel].faixas.push({minimo:0,percentual:0});renderFaixaList();}
 function removerFaixa(j){working.campanhas[campSel].faixas.splice(j,1);renderFaixaList();}
-let bancoProdIdx=null, bancoFotos=[], bancoSel={}, bancoAlvo='produto';
+let bancoProdIdx=null, bancoFotos=[], bancoSel={}, bancoAlvo='produto', bancoBusca='';
 async function abrirBanco(i,alvo){
   bancoAlvo=alvo||'produto';bancoProdIdx=i;bancoSel={};
   document.getElementById('bancoAdd').disabled=true;
@@ -675,14 +680,15 @@ async function abrirBanco(i,alvo){
     if(!r.ok)throw new Error('pasta não encontrada');
     const arq=await r.json();
     const base=`https://${repo.split('/')[0]}.github.io/${repo.split('/')[1]}/${pasta}/`;
-    bancoFotos=arq.filter(a=>a.type==='file'&&/\.(jpe?g|png|webp|gif)$/i.test(a.name)).map(a=>base+encodeURIComponent(a.name));
+    bancoFotos=arq.filter(a=>a.type==='file'&&/\.(jpe?g|png|webp|gif)$/i.test(a.name)).map(a=>({url:base+encodeURIComponent(a.name),nome:a.name.replace(/\.[a-z0-9]+$/i,'')}));bancoBusca='';
     if(!bancoFotos.length){corpo.innerHTML=`<div class="banco-msg">Nenhuma foto na pasta <b>${pasta}/</b> ainda.<br>Suba suas imagens lá no GitHub e volte aqui. 💛</div>`;return;}
     renderBanco();
   }catch(e){corpo.innerHTML=`<div class="banco-msg">Não achei a pasta <b>${pasta}/</b> no repositório <b>${repo}</b>.<br>Confira o nome do repositório e se a pasta existe com fotos dentro.</div>`;}
 }
-function renderBanco(){document.getElementById('bancoCorpo').innerHTML='<div class="banco-grid">'+bancoFotos.map((u,k)=>`<div class="banco-item ${bancoSel[k]?'sel':''}" onclick="toggleBanco(${k})"><img src="${u}" loading="lazy"><div class="ck">✓</div></div>`).join('')+'</div>';}
-function toggleBanco(k){if(bancoSel[k])delete bancoSel[k];else bancoSel[k]=1;document.getElementById('bancoAdd').disabled=Object.keys(bancoSel).length===0;renderBanco();}
-function usarSelecionadas(){const escolhidas=Object.keys(bancoSel).map(k=>bancoFotos[k]);if(bancoAlvo==='vitrine'){const v=working.campanhas[campSel].vitrine;escolhidas.forEach(u=>{if(!v.imgs.includes(u))v.imgs.push(u);});fecharBanco();renderMain();toast('Imagens da vitrine adicionadas! 📂');return;}const p=working.campanhas[campSel].produtos[bancoProdIdx];escolhidas.forEach(u=>{if(!p.imgs.includes(u))p.imgs.push(u);});if(!p.codigo&&escolhidas.length){try{let nome=decodeURIComponent(escolhidas[0].split('/').pop());nome=nome.replace(/\.[a-z0-9]+$/i,'');p.codigo=nome;}catch(e){}}fecharBanco();refreshProdEditor();toast(p.codigo?('Fotos adicionadas · código: '+p.codigo+' 📂'):'Fotos adicionadas do banco! 📂');}
+function renderBanco(){const corpo=document.getElementById('bancoCorpo');const b=(bancoBusca||'').toLowerCase();const filt=bancoFotos.map((f,k)=>({f,k})).filter(o=>!b||o.f.nome.toLowerCase().includes(b));const grid=filt.map(({f,k})=>`<div class="banco-cel"><div class="banco-item ${bancoSel[k]?'sel':''}" onclick="toggleBanco(${k})"><img src="${f.url}" loading="lazy"><div class="ck">✓</div></div><div class="banco-nome">${escH(f.nome)}</div></div>`).join('');corpo.innerHTML=`<div class="banco-busca"><input placeholder="🔎 Buscar por nome/código" value="${escA(bancoBusca||'')}" oninput="bancoBusca=this.value;renderBancoGrid()"></div><div class="banco-cont" id="bancoCont">${bancoFotos.length} foto(s)</div><div class="banco-grid" id="bancoGrid">${grid||'<div style=\'grid-column:1/-1;text-align:center;color:var(--cinza);padding:20px\'>Nada encontrado.</div>'}</div>`;}
+function renderBancoGrid(){const b=(bancoBusca||'').toLowerCase();const filt=bancoFotos.map((f,k)=>({f,k})).filter(o=>!b||o.f.nome.toLowerCase().includes(b));const g=document.getElementById('bancoGrid');if(!g)return;g.innerHTML=filt.map(({f,k})=>`<div class="banco-cel"><div class="banco-item ${bancoSel[k]?'sel':''}" onclick="toggleBanco(${k})"><img src="${f.url}" loading="lazy"><div class="ck">✓</div></div><div class="banco-nome">${escH(f.nome)}</div></div>`).join('')||'<div style=\'grid-column:1/-1;text-align:center;color:var(--cinza);padding:20px\'>Nada encontrado.</div>';}
+function toggleBanco(k){if(bancoSel[k])delete bancoSel[k];else bancoSel[k]=1;document.getElementById('bancoAdd').disabled=Object.keys(bancoSel).length===0;renderBancoGrid();}
+function usarSelecionadas(){const escolhidas=Object.keys(bancoSel).map(k=>bancoFotos[k]);if(bancoAlvo==='vitrine'){const v=working.campanhas[campSel].vitrine;escolhidas.forEach(o=>{if(!v.imgs.includes(o.url))v.imgs.push(o.url);});fecharBanco();renderMain();toast('Imagens da vitrine adicionadas! 📂');return;}const p=working.campanhas[campSel].produtos[bancoProdIdx];escolhidas.forEach(o=>{if(!p.imgs.includes(o.url))p.imgs.push(o.url);});if(!p.codigo&&escolhidas.length){p.codigo=escolhidas[0].nome;}fecharBanco();refreshProdEditor();toast(p.codigo?('Fotos adicionadas · código: '+p.codigo+' 📂'):'Fotos adicionadas do banco! 📂');}
 function fecharBanco(){document.getElementById('bancoOverlay').classList.remove('aberto');document.getElementById('bancoModal').classList.remove('aberto');}
 function renderNumRows(i){const alvo=document.getElementById('numRows'+i);if(!alvo)return;const p=edProds()[i];alvo.innerHTML=(p.numeros||[]).map((o,j)=>`<div class="faixa-row"><input placeholder="nº" value="${escA(o.num)}" oninput="edProds()[${i}].numeros[${j}].num=this.value.trim()"><input type="number" placeholder="estoque" value="${o.estoque}" oninput="edProds()[${i}].numeros[${j}].estoque=this.value===''?'':(parseInt(this.value)||0)"><button class="rmf" onclick="removerNumRow(${i},${j})">×</button></div>`).join('');}
 function addNumRow(i){edProds()[i].numeros.push({num:'',estoque:''});renderNumRows(i);}

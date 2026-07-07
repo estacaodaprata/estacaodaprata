@@ -403,6 +403,72 @@ textarea{font-family:inherit}
 .ed-ajuda2{background:linear-gradient(135deg,#fff,#fdf6f7);border:1px solid var(--rose-claro);border-radius:12px;padding:12px 15px;margin-bottom:14px;font-size:12.5px;color:var(--preto-suave);line-height:1.5}
 .ed-ajuda2 b{color:var(--rose-escuro)}
 .banner-prev{cursor:pointer}
+
+/* ===== PAINEL PROFISSIONAL ===== */
+#editor{font-size:15px;background:#f4f1ef}
+.ed-topo{padding:22px 22px 18px;background:#fff;border-bottom:1px solid var(--linha);position:relative}
+.ed-topo::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:linear-gradient(90deg,transparent,var(--rose-claro),transparent)}
+.ed-topo h1{font-size:26px;font-weight:600;letter-spacing:.01em}
+.ed-topo p{font-size:12.5px;color:var(--prata-3)}
+.tabs{background:#fff;padding:0 6px}
+.tabs .tab{font-size:14px;padding:16px 4px;letter-spacing:.005em}
+.tab.on{background:linear-gradient(180deg,#fff,#faf6f5)}
+.ed-wrap{max-width:700px;padding:22px 18px 130px}
+.ed-ajuda{display:none}
+.campo{margin-bottom:15px}
+.campo label{font-size:12.5px;letter-spacing:.02em;color:var(--preto-suave);text-transform:none;font-weight:600;margin-bottom:6px}
+.campo .dica{font-size:12px;color:var(--prata-3)}
+.campo input,.campo textarea,.cat-sel,.mini-sel,.prod-busca input,.camp-busca input,.cat-add input{font-size:16px;padding:12px 14px;border-radius:11px;border-color:#e4ddd8}
+.campo input:focus,.campo textarea:focus{border-color:var(--rose);box-shadow:0 0 0 3px rgba(183,110,121,.12)}
+.linha2{gap:12px}
+/* cards de campanha */
+.camp-card{padding:18px 18px;border-radius:16px;box-shadow:0 10px 26px -20px rgba(23,19,15,.5);margin-bottom:14px}
+.camp-card h3{font-size:22px}
+.camp-card .meta{font-size:12.5px;color:var(--prata-3);margin-top:3px;font-family:'Jost',sans-serif;letter-spacing:.02em}
+.camp-card .acoes{gap:8px;margin-top:14px}
+.camp-card .acoes button{font-size:13px;font-weight:600;border-radius:100px;padding:9px 16px}
+.ac-editar{background:var(--preto);color:#fff}
+.ac-dup,.ac-loja{background:#fff;border:1.5px solid #e4ddd8;color:var(--preto-suave)}
+.ac-loja{border-color:var(--rose-claro);color:var(--rose-escuro)}
+.ac-del{background:#fff;border:1.5px solid #f0cfcf;color:#b5433a}
+.btn-nova{padding:16px;font-size:15px;border-radius:14px;border-color:var(--rose-claro);background:#fff}
+.camp-busca{margin-bottom:14px}
+/* acordeões */
+.acc{border-radius:16px;box-shadow:0 8px 22px -18px rgba(23,19,15,.45);border-color:#ece5e0}
+.acc>summary{font-size:18.5px;padding:17px 20px}
+.acc-body{padding:18px 20px 22px}
+/* subtabs */
+.subtabs{padding:5px;border-radius:100px}
+.subtab{font-size:14.5px;padding:12px}
+/* lista de produtos */
+.prod-lin{padding:11px 12px;border-radius:14px;box-shadow:0 6px 16px -16px rgba(0,0,0,.5)}
+.pl-foto{width:56px;height:56px;border-radius:11px}
+.pl-nome{font-size:17px}
+.pl-meta{font-size:13px;color:var(--cinza)}
+.pl-meta b{color:var(--rose-escuro);font-weight:600}
+.pl-acoes button{width:36px;height:36px;font-size:16px;border-radius:9px}
+.pl-star{font-size:18px}
+.prod-busca input{font-size:16px}
+.prod-count{font-size:12px}
+.btn-add-prod{padding:16px;font-size:15px;border-radius:14px}
+.desc-geral{border-radius:14px;padding:14px}
+.desc-geral .tt{font-size:13px}
+/* paginação numerada */
+.prod-pag{gap:6px;flex-wrap:wrap}
+.prod-pag button,.pg-num{min-width:38px;height:38px;padding:0 10px;border-radius:10px;border:1.5px solid #e4ddd8;background:#fff;font-weight:600;font-size:14px;color:var(--preto-suave)}
+.pg-num.on{background:var(--rose);border-color:var(--rose);color:#fff}
+.pg-dots{color:var(--prata-3);padding:0 2px}
+/* banco P/M/G */
+.col-tam{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--cinza)}
+.ct-btn{width:36px;height:34px;border-radius:9px;border:1.5px solid #e4ddd8;background:#fff;font-weight:700;font-size:13px;color:var(--preto-suave)}
+.ct-btn.on{border-color:var(--rose);background:var(--rose);color:#fff}
+.banco-nome{font-size:12px;font-weight:600;color:var(--preto-suave)}
+/* barra inferior */
+.ed-barra{padding:16px 18px calc(16px + env(safe-area-inset-bottom));box-shadow:0 -12px 30px -20px rgba(23,19,15,.4)}
+.btn-prev,.btn-baixar{padding:16px;font-size:15px;border-radius:14px}
+.chk{font-size:14px}
+.sec-titulo{font-size:22px}
+.cores-grid{gap:10px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto}}
 </style>
 </head>
@@ -479,7 +545,7 @@ textarea{font-family:inherit}
 <div class="toast" id="toast"></div>
 
 <script>
-let CONFIG, working, VENDEDORA, MODO='especial', mainView='campanhas', campSel=null, subAba='produtos', prodSel=null, prodBusca='', prodOrdem='', prodPag=0, zoomId=null;
+let CONFIG, working, VENDEDORA, MODO='especial', mainView='campanhas', campSel=null, subAba='produtos', prodSel=null, prodBusca='', prodOrdem='', prodPag=0, campBusca='', zoomId=null;
 const carrinho={}, galeriaIdx={};
 let querCatalogo=null, numeroAtual=null, dashDados=null, dashFiltro='todos';
 
@@ -599,16 +665,21 @@ function lerArquivo(file){return new Promise(r=>{const fr=new FileReader();fr.on
 function setMain(v){mainView=v;if(v!=='campanhas')campSel=null;['Campanhas','Config','Dash'].forEach(x=>document.getElementById('tab'+x).classList.toggle('on',(x==='Campanhas'&&v==='campanhas')||(x==='Config'&&v==='config')||(x==='Dash'&&v==='dash')));renderMain();}
 function renderMain(){
   const aj=document.getElementById('edAjuda'),ct=document.getElementById('tabConteudo');
-  if(mainView==='config'){aj.innerHTML='Coisas que valem para <b>todas as campanhas</b>: logo, favicon, vendedoras, brinde e integrações.<span class="salvo-tag">✓ salvamento automático ligado</span>';ct.innerHTML=configHTML();iniciarConfig();}
-  else if(mainView==='dash'){aj.innerHTML='Acompanhe seus pedidos e vendas. Precisa conectar sua fonte de dados na aba Configurações.<span class="salvo-tag">✓ salvamento automático ligado</span>';ct.innerHTML='<div class="dash-filtros"><button class="'+(dashFiltro==='todos'?'on':'')+'" onclick="setDashFiltro(\'todos\')">Tudo</button><button class="'+(dashFiltro==='30'?'on':'')+'" onclick="setDashFiltro(\'30\')">30 dias</button><button class="'+(dashFiltro==='7'?'on':'')+'" onclick="setDashFiltro(\'7\')">7 dias</button></div><div style="text-align:right;margin-bottom:12px"><button class="btn-atualizar" onclick="carregarDashboard()">↻ Atualizar</button></div><div id="dashBody"></div>';carregarDashboard();}
-  else{aj.innerHTML='Crie quantas campanhas quiser. Cada uma vira um link/arquivo próprio. As já existentes continuam intactas.<span class="salvo-tag">✓ salvamento automático ligado</span>';if(campSel==null){ct.innerHTML=campListHTML();}else{ct.innerHTML=campEditorHTML(campSel);if(subAba==='produtos'){renderProdArea();}else{renderFaixaList();renderCatList();}}}
+  if(mainView==='config'){aj.innerHTML='';ct.innerHTML=configHTML();iniciarConfig();}
+  else if(mainView==='dash'){aj.innerHTML='';ct.innerHTML='<div class="dash-filtros"><button class="'+(dashFiltro==='todos'?'on':'')+'" onclick="setDashFiltro(\'todos\')">Tudo</button><button class="'+(dashFiltro==='30'?'on':'')+'" onclick="setDashFiltro(\'30\')">30 dias</button><button class="'+(dashFiltro==='7'?'on':'')+'" onclick="setDashFiltro(\'7\')">7 dias</button></div><div style="text-align:right;margin-bottom:12px"><button class="btn-atualizar" onclick="carregarDashboard()">↻ Atualizar</button></div><div id="dashBody"></div>';carregarDashboard();}
+  else{aj.innerHTML='';if(campSel==null){ct.innerHTML=campListHTML();}else{ct.innerHTML=campEditorHTML(campSel);if(subAba==='produtos'){renderProdArea();}else{renderFaixaList();renderCatList();}}}
 }
 
 /* ----- CAMPANHAS: lista ----- */
 function campListHTML(){
-  return working.campanhas.map((c,i)=>`<div class="camp-card"><h3>${escH(c.nome)}</h3><div class="meta">link: ${c.slug}.html · ${c.produtos.length} peça(s)</div><div class="acoes"><button class="ac-editar" onclick="editarCampanha(${i})">✏️ Editar</button><button class="ac-dup" onclick="duplicarCampanha(${i})">⧉ Duplicar</button>${working.campanhas.length>1?`<button class="ac-del" onclick="excluirCampanha(${i})">🗑 Excluir</button>`:''}</div></div>`).join("")+`<button class="btn-nova" onclick="novaCampanha()">+ Nova campanha</button>`;
+  const busca=`<div class="camp-busca"><input placeholder="🔎 Buscar campanha" value="${escA(campBusca||'')}" oninput="campBusca=this.value;const el=document.getElementById('campCards');if(el)el.innerHTML=campCardsHTML()"></div>`;
+  return (working.campanhas.length>3?busca:'')+`<div id="campCards">${campCardsHTML()}</div>`+`<button class="btn-nova" onclick="novaCampanha()">+ Nova campanha</button>`;
 }
-function editarCampanha(i){campSel=i;subAba='produtos';prodSel=null;prodBusca='';renderMain();window.scrollTo(0,0);}
+function campCardsHTML(){const b=(campBusca||'').toLowerCase();return working.campanhas.map((c,i)=>({c,i})).filter(o=>!b||(o.c.nome||'').toLowerCase().includes(b)).map(({c,i})=>`<div class="camp-card"><h3>${escH(c.nome)}</h3><div class="meta">${c.slug}.html · ${c.produtos.length} peça(s)</div><div class="acoes"><button class="ac-editar" onclick="editarCampanha(${i})">Editar</button><button class="ac-dup" onclick="duplicarCampanha(${i})">Duplicar</button><button class="ac-loja" onclick="preverCampanha('${c.slug}')">Ver loja</button>${working.campanhas.length>1?`<button class="ac-del" onclick="excluirCampanha(${i})">Excluir</button>`:''}</div></div>`).join("");}
+function preverCampanha(slug){verPreview();aplicarPreview(slug);}
+let VENDIDOS_ED={};
+async function carregarVendidosPainel(slug){VENDIDOS_ED={};try{const r=await fetch(`${SUPA_URL}/rest/v1/pedidos?campanha=eq.${encodeURIComponent(slug)}&status=eq.ativo&select=itens`,{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});if(!r.ok)return;const arr=await r.json();arr.forEach(pd=>{(pd.itens||[]).forEach(it=>{const k=(it.id!=null?it.id:(it.codigo||it.nome))+'#'+(it.numero||'');VENDIDOS_ED[k]=(VENDIDOS_ED[k]||0)+(Number(it.qtd)||0);});});if(campSel!=null&&subAba==='produtos'&&prodSel==null)renderProdLinhas();}catch(e){}}
+function editarCampanha(i){campSel=i;subAba='produtos';prodSel=null;prodBusca='';renderMain();window.scrollTo(0,0);carregarVendidosPainel(working.campanhas[i].slug);}
 function setSubAba(a){subAba=a;prodSel=null;renderMain();window.scrollTo(0,0);}
 function novaCampanha(){const base='Campanha '+(working.campanhas.length+1);let slug=slugify(base);const usados=working.campanhas.map(c=>c.slug);while(usados.includes(slug))slug+='-2';working.campanhas.push({slug,nome:base,url:"",ogTitulo:"Estação da Prata",ogDescricao:"",banner:"",texto:{selo:"",titulo:base,desconto:"ATÉ 49% DE DESCONTO!!",sub:""},produtos:[],brinde:{ativo:false,nome:"Brinde especial",valorMinimo:1000,img:"",regras:""},faixas:[],emojiBrinde:"💎",corFundo:"",corSelo:"",estoqueBaixo:3,vitrine:{tipo:"nenhum",imgs:[]}});campSel=working.campanhas.length-1;renderMain();window.scrollTo(0,0);}
 function duplicarCampanha(i){const nova=clone(working.campanhas[i]);nova.nome=nova.nome+' (cópia)';let slug=slugify(nova.nome);const usados=working.campanhas.map(c=>c.slug);while(usados.includes(slug))slug+='-2';nova.slug=slug;working.campanhas.splice(i+1,0,nova);renderMain();toast('Campanha duplicada! ⧉');}
@@ -740,11 +811,13 @@ function renderProdLinhas(){
   alvo.innerHTML=pagina.map(({p,idx})=>{
     const foto=(p.imgs&&p.imgs[0])?`<img src="${p.imgs[0]}">`:'💍';
     const tot=estoqueTotalPeca(p);const estTxt=tot===Infinity?'∞':tot;let badge='';if(tot<=0)badge=' <span class="pl-badge esg">esgotado</span>';else if(tot!==Infinity&&tot<=baixo)badge=' <span class="pl-badge">últimas</span>';
-    return `<div class="prod-lin" ${arrast?`draggable="true" ondragstart="dragInicio(event,${idx})" ondragover="event.preventDefault()" ondrop="dragSolta(event,${idx})"`:''}>${arrast?'<div class="pl-drag">⇅</div>':''}<div class="pl-foto">${foto}</div><div class="pl-info" onclick="editarProduto(${idx})"><div class="pl-nome">${escH(p.nome)||'(sem nome)'}</div><div class="pl-meta">${p.codigo?('cód '+escH(p.codigo)+' · '):''}${fmt(p.precoPor)} · estoque ${estTxt}${badge}</div></div><div class="pl-acoes">${arrast?`<button class="mv" onclick="moverProduto(${idx},-1)">↑</button><button class="mv" onclick="moverProduto(${idx},1)">↓</button>`:''}<button class="pl-star" onclick="event.stopPropagation();toggleDestaque(${idx})">${p.destaque?'⭐':'☆'}</button><button onclick="editarProduto(${idx})">✏️</button><button onclick="duplicarProduto(${idx})">⧉</button><button onclick="excluirProduto(${idx})">🗑</button></div></div>`;
+    return `<div class="prod-lin" ${arrast?`draggable="true" ondragstart="dragInicio(event,${idx})" ondragover="event.preventDefault()" ondrop="dragSolta(event,${idx})"`:''}>${arrast?'<div class="pl-drag">⇅</div>':''}<div class="pl-foto">${foto}</div><div class="pl-info" onclick="editarProduto(${idx})"><div class="pl-nome">${escH(p.nome)||'(sem nome)'}</div><div class="pl-meta">${p.codigo?('cód '+escH(p.codigo)+' · '):''}${fmt(p.precoPor)} · estoque ${estTxt}${vendCnt(p)}${badge}</div></div><div class="pl-acoes"><button class="pl-star" onclick="event.stopPropagation();toggleDestaque(${idx})">${p.destaque?'⭐':'☆'}</button><button onclick="editarProduto(${idx})">✏️</button><button onclick="duplicarProduto(${idx})">⧉</button><button onclick="excluirProduto(${idx})">🗑</button></div></div>`;
   }).join("");
-  if(pg)pg.innerHTML=totPag>1?`<button onclick="mudarPag(-1)" ${prodPag===0?'disabled':''}>‹ anterior</button><span>Página ${prodPag+1} de ${totPag}</span><button onclick="mudarPag(1)" ${prodPag>=totPag-1?'disabled':''}>próxima ›</button>`:'';
+  if(pg){if(totPag>1){let bt=`<button onclick="irPag(0)" ${prodPag===0?'disabled':''}>«</button><button onclick="mudarPag(-1)" ${prodPag===0?'disabled':''}>‹</button>`;for(let nn=0;nn<totPag;nn++){if(nn===0||nn===totPag-1||Math.abs(nn-prodPag)<=1){bt+=`<button class="pg-num ${nn===prodPag?'on':''}" onclick="irPag(${nn})">${nn+1}</button>`;}else if(Math.abs(nn-prodPag)===2){bt+='<span class="pg-dots">…</span>';}}bt+=`<button onclick="mudarPag(1)" ${prodPag>=totPag-1?'disabled':''}>›</button><button onclick="irPag(${totPag-1})" ${prodPag>=totPag-1?'disabled':''}>»</button>`;pg.innerHTML=bt;}else pg.innerHTML='';}
 }
 function mudarPag(d){prodPag+=d;renderProdLinhas();window.scrollTo(0,0);}
+function irPag(n){prodPag=n;renderProdLinhas();window.scrollTo(0,0);}
+function vendCnt(p){let v=0;if(p.numeros&&p.numeros.length){p.numeros.forEach(nu=>v+=(VENDIDOS_ED[p.id+'#'+nu.num]||0));}else{v=(VENDIDOS_ED[p.id+'#']||0);}return v>0?' · <b>vendidas '+v+'</b>':'';}
 function setProdOrdem(v){prodOrdem=v;prodPag=0;renderProdLinhas();}
 function moverProduto(idx,dir){const arr=edProds();const j=idx+dir;if(j<0||j>=arr.length)return;const t=arr[idx];arr[idx]=arr[j];arr[j]=t;renderProdLinhas();}
 function toggleDestaque(idx){edProds()[idx].destaque=!edProds()[idx].destaque;renderProdLinhas();}
@@ -795,8 +868,8 @@ async function abrirBanco(i,alvo){
 }
 async function listarBanco(){const corpo=document.getElementById('bancoCorpo');try{const r=await fetch(`${SUPA_URL}/storage/v1/object/list/fotos`,{method:'POST',headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json'},body:JSON.stringify({prefix:'',limit:1000,offset:0,sortBy:{column:'name',order:'asc'}})});if(!r.ok)throw new Error('http '+r.status);const arr=await r.json();bancoFotos=arr.filter(a=>a.name&&/\.(jpe?g|png|webp|gif)$/i.test(a.name)).map(a=>({url:`${SUPA_URL}/storage/v1/object/public/fotos/${encodeURIComponent(a.name)}`,nome:a.name.replace(/\.[a-z0-9]+$/i,'').toUpperCase()}));renderBanco();}catch(e){corpo.innerHTML='<div class="banco-msg">Não consegui carregar as fotos do Supabase. Confira se o bucket <b>fotos</b> existe e está público, e se as permissões foram criadas.</div>';}}
 async function enviarBanco(inp){if(!inp.files.length)return;const n=inp.files.length;let ok=0;toast('Enviando '+n+' foto(s)...');for(const f of inp.files){try{const dataUrl=await comprimir(f,1400,.85);const blob=dataURLtoBlob(dataUrl);let nome=f.name.replace(/\.[a-z0-9]+$/i,'').normalize('NFD').replace(/[^a-zA-Z0-9-_]+/g,'-').replace(/^-+|-+$/g,'').toLowerCase()||('foto-'+Date.now());nome=nome+'.jpg';const r=await fetch(`${SUPA_URL}/storage/v1/object/fotos/${encodeURIComponent(nome)}`,{method:'POST',headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'image/jpeg','x-upsert':'true'},body:blob});if(r.ok)ok++;}catch(e){}}inp.value='';toast(ok+' de '+n+' foto(s) enviada(s)! 📂');await listarBanco();}
-function setBancoColunas(v){working.bancoColunas=parseInt(v)||3;const cn=document.getElementById('colNum');if(cn)cn.textContent=working.bancoColunas;const g=document.getElementById('bancoGrid');if(g)g.style.gridTemplateColumns='repeat('+working.bancoColunas+',1fr)';}
-function renderBanco(){const corpo=document.getElementById('bancoCorpo');const cols=working.bancoColunas||3;const up=`<div class="banco-up"><label class="btn-up">⬆️ Enviar fotos<input type="file" accept="image/*" multiple onchange="enviarBanco(this)"></label><div class="col-slider">Colunas <input type="range" min="2" max="6" step="1" value="${cols}" oninput="setBancoColunas(this.value)" onchange="setBancoColunas(this.value)"> <span id="colNum">${cols}</span></div></div>`;const busca=`<div class="banco-busca"><input placeholder="🔎 Buscar por nome/código" value="${escA(bancoBusca||'')}" oninput="bancoBusca=this.value;renderBancoGrid()"></div>`;corpo.innerHTML=up+busca+`<div class="banco-cont" id="bancoCont">${bancoFotos.length} foto(s)</div><div class="banco-grid" id="bancoGrid" style="grid-template-columns:repeat(${cols},1fr)"></div>`;renderBancoGrid();}
+function setBancoColunas(v){working.bancoColunas=parseInt(v)||3;renderBanco();}
+function renderBanco(){const corpo=document.getElementById('bancoCorpo');const cols=working.bancoColunas||3;const up=`<div class="banco-up"><label class="btn-up">⬆️ Enviar fotos<input type="file" accept="image/*" multiple onchange="enviarBanco(this)"></label><div class="col-tam">Tamanho <button class="ct-btn ${cols>=5?'on':''}" onclick="setBancoColunas(5)">P</button><button class="ct-btn ${(cols===3||cols===4)?'on':''}" onclick="setBancoColunas(3)">M</button><button class="ct-btn ${cols<=2?'on':''}" onclick="setBancoColunas(2)">G</button></div></div>`;const busca=`<div class="banco-busca"><input placeholder="🔎 Buscar por nome/código" value="${escA(bancoBusca||'')}" oninput="bancoBusca=this.value;renderBancoGrid()"></div>`;corpo.innerHTML=up+busca+`<div class="banco-cont" id="bancoCont">${bancoFotos.length} foto(s)</div><div class="banco-grid" id="bancoGrid" style="grid-template-columns:repeat(${cols},1fr)"></div>`;renderBancoGrid();}
 function renderBancoGrid(){const b=(bancoBusca||'').toLowerCase();const filt=bancoFotos.map((f,k)=>({f,k})).filter(o=>!b||o.f.nome.toLowerCase().includes(b));const g=document.getElementById('bancoGrid');if(!g)return;g.innerHTML=filt.map(({f,k})=>`<div class="banco-cel"><div class="banco-item ${bancoSel[k]?'sel':''}" onclick="toggleBanco(${k})"><img src="${f.url}" loading="lazy"><div class="ck">✓</div></div><div class="banco-nome">${escH(f.nome)}</div></div>`).join('')||'<div style=\'grid-column:1/-1;text-align:center;color:var(--cinza);padding:20px\'>Nada encontrado.</div>';}
 function toggleBanco(k){if(bancoSel[k])delete bancoSel[k];else bancoSel[k]=1;document.getElementById('bancoAdd').disabled=Object.keys(bancoSel).length===0;renderBancoGrid();}
 function abrirBancoPopup(i){abrirBanco(i,'popup');}
@@ -813,7 +886,6 @@ function removerVitrineImg(i,j){working.campanhas[i].vitrine.imgs.splice(j,1);re
 
 /* ----- CONFIG ----- */
 function configHTML(){return `
-  <div class="ed-ajuda2">⚙️ Aqui ficam as coisas que valem para <b>todas</b> as campanhas. O resto (cores, aviso, categorias, brinde, pop-up...) fica dentro de cada campanha.</div>
   <details class="acc" open><summary>🎨 Identidade</summary><div class="acc-body"><div class="bsub">Logo e ícone da loja.</div>
     <div class="campo"><label>Logo (opcional)</label><div class="ed-thumb add" style="width:150px;height:80px" onclick="document.getElementById('logoInput').click()" id="logoBox"></div><span id="removerLogo" style="display:none;font-size:11px;color:var(--rose-escuro);text-decoration:underline;cursor:pointer;margin-top:6px" onclick="removerLogo()">remover logo</span><input type="file" id="logoInput" accept="image/*" onchange="enviarLogo(this)" style="display:none"></div>
     <div class="campo"><label>Favicon</label><div class="ed-thumb add quad" onclick="document.getElementById('faviconInput').click()" id="faviconBox"></div><input type="file" id="faviconInput" accept="image/*" onchange="enviarFavicon(this)" style="display:none"></div>

@@ -267,9 +267,9 @@ textarea{font-family:inherit}
 .prog-nudge b{font-weight:700}
 .banco-cfg{background:#fff;border:1px solid var(--rose-claro);border-radius:12px;padding:12px 14px;margin-bottom:14px;font-size:12px;color:var(--preto-suave);line-height:1.5}
 .banco-cfg b{color:var(--rose-escuro)}
-.banco-overlay{position:fixed;inset:0;z-index:75;background:rgba(23,19,15,.55);opacity:0;visibility:hidden;transition:opacity .2s}
+.banco-overlay{position:fixed;inset:0;z-index:85;background:rgba(23,19,15,.55);opacity:0;visibility:hidden;transition:opacity .2s}
 .banco-overlay.aberto{opacity:1;visibility:visible}
-.banco-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.96);z-index:76;background:#fff;border-radius:18px;width:92%;max-width:520px;max-height:82vh;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:all .2s;box-shadow:var(--sombra)}
+.banco-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.96);z-index:86;background:#fff;border-radius:18px;width:92%;max-width:520px;max-height:82vh;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:all .2s;box-shadow:var(--sombra)}
 .banco-modal.aberto{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
 .banco-topo{padding:16px 18px 12px;border-bottom:1px solid var(--linha);display:flex;align-items:center;justify-content:space-between}
 .banco-topo h3{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600}
@@ -335,6 +335,25 @@ textarea{font-family:inherit}
 .save-status.salvo{background:#eef7ee;color:#3c6b3c;border:1px solid #cfe6cf}
 .save-status.erro{background:#fff4f4;color:#a53838;border:1px solid #f0c9c9}
 .save-status .bola{width:8px;height:8px;border-radius:50%;background:currentColor}
+.prod-modal-ov{position:fixed;inset:0;z-index:60;background:rgba(23,19,15,.5);opacity:0;visibility:hidden;transition:opacity .2s}
+.prod-modal-ov.aberto{opacity:1;visibility:visible}
+.prod-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.97);z-index:61;background:var(--creme);border-radius:18px;width:94%;max-width:560px;max-height:90vh;display:flex;flex-direction:column;opacity:0;visibility:hidden;transition:all .2s;box-shadow:var(--sombra)}
+.prod-modal.aberto{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+.pm-head{padding:15px 18px 12px;border-bottom:1px solid var(--linha);display:flex;align-items:center;justify-content:space-between;background:#fff;border-radius:18px 18px 0 0}
+.pm-head h3{font-family:'Cormorant Garamond',serif;font-size:20px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-right:10px}
+.pm-body{overflow-y:auto;padding:14px 16px;flex:1}
+.pm-body .ed-prod{border:none;box-shadow:none;padding:0;background:transparent;margin:0}
+.pm-foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--linha);background:#fff;display:flex;gap:8px;border-radius:0 0 18px 18px}
+.pm-foot button{flex:1;padding:12px 6px;border-radius:100px;font-weight:600;font-size:13px}
+.pm-dup{background:#fff;border:1.5px solid var(--linha);color:var(--preto-suave)}
+.pm-novo{background:#fff;border:1.5px solid var(--rose);color:var(--rose-escuro)}
+.pm-ok{background:var(--rose-grad);color:#fff}
+.cat-sel{width:100%;padding:11px 13px;border:1px solid var(--linha);border-radius:10px;font-size:15px;background:var(--creme);font-family:inherit}
+.cat-chip{display:inline-flex;align-items:center;gap:6px;background:#fff;border:1.5px solid var(--linha);border-radius:100px;padding:6px 12px;margin:0 6px 6px 0;font-size:13px}
+.cat-chip button{color:#c0392b;font-size:15px;line-height:1}
+.cat-add{display:flex;gap:8px;margin-top:8px}
+.cat-add input{flex:1;padding:10px 12px;border:1px solid var(--linha);border-radius:10px;font-size:14px;background:var(--creme)}
+.cat-add button{padding:10px 15px;border-radius:100px;background:var(--rose);color:#fff;font-weight:600;font-size:13px;white-space:nowrap}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto}}
 </style>
 </head>
@@ -401,6 +420,8 @@ textarea{font-family:inherit}
     <div class="banco-corpo" id="bancoCorpo"></div>
     <div class="banco-pe"><button class="banco-add-full" id="bancoAdd" onclick="usarSelecionadas()" disabled>Usar selecionadas</button></div>
   </div>
+  <div class="prod-modal-ov" id="prodModalOv" onclick="fecharProdModal()"></div>
+  <div class="prod-modal" id="prodModal"><div class="pm-head"><h3 id="pmTitulo">Peça</h3><button class="fechar" onclick="fecharProdModal()">×</button></div><div class="pm-body" id="pmBody"></div><div class="pm-foot"><button class="pm-dup" onclick="duplicarAtual()">⧉ Duplicar</button><button class="pm-novo" onclick="salvarENovo()">+ Novo</button><button class="pm-ok" onclick="fecharProdModal()">Concluir</button></div></div>
 </div>
 <div class="toast" id="toast"></div>
 
@@ -421,11 +442,12 @@ function normalizar(c){
   c.logo=c.logo||""; c.favicon=c.favicon||"";
   c.integra=c.integra||{}; c.integra.pedidosWebhook=c.integra.pedidosWebhook||""; c.integra.dashboardUrl=c.integra.dashboardUrl||""; c.integra.bancoRepo=c.integra.bancoRepo||""; c.integra.bancoPasta=c.integra.bancoPasta||"fotos";
   c.brinde=c.brinde||{}; if(c.brinde.ativo==null)c.brinde.ativo=true; c.brinde.nome=c.brinde.nome||"Brinde especial"; c.brinde.valorMinimo=c.brinde.valorMinimo||1000; c.brinde.img=c.brinde.img||""; c.brinde.regras=c.brinde.regras||"";
-  c.vendedoras=c.vendedoras||[];
+  c.vendedoras=c.vendedoras||[];c.categorias=Array.isArray(c.categorias)?c.categorias:[];
   c.campanhas=Array.isArray(c.campanhas)?c.campanhas:[];
   if(!c.campanhas.length)c.campanhas.push({slug:"especial",nome:"Especiais",url:"",ogTitulo:"Estação da Prata",ogDescricao:"",banner:"",texto:{selo:"",titulo:"",desconto:"",sub:""},produtos:[]});
   const usados={};
   c.campanhas.forEach(o=>{o.slug=o.slug||slugify(o.nome);while(usados[o.slug])o.slug=o.slug+'-2';usados[o.slug]=1;o.nome=o.nome||o.slug;o.url=o.url||"";o.ogTitulo=o.ogTitulo||"Estação da Prata";o.ogDescricao=o.ogDescricao||"";o.banner=o.banner||"";o.texto=o.texto||{};o.texto.selo=o.texto.selo||"";o.texto.titulo=o.texto.titulo||"";o.texto.desconto=o.texto.desconto||"";o.texto.sub=o.texto.sub||"";o.produtos=Array.isArray(o.produtos)?o.produtos:[];o.brinde=o.brinde||{};if(o.brinde.ativo==null)o.brinde.ativo=false;o.brinde.nome=o.brinde.nome||"Brinde especial";o.brinde.valorMinimo=o.brinde.valorMinimo||1000;o.brinde.img=o.brinde.img||"";o.brinde.regras=o.brinde.regras||"";o.faixas=Array.isArray(o.faixas)?o.faixas:[];o.emojiBrinde=o.emojiBrinde||'💎';o.corFundo=o.corFundo||'';o.corSelo=o.corSelo||'';o.estoqueBaixo=(o.estoqueBaixo==null?3:o.estoqueBaixo);o.vitrine=o.vitrine||{};o.vitrine.tipo=o.vitrine.tipo||'nenhum';o.vitrine.imgs=Array.isArray(o.vitrine.imgs)?o.vitrine.imgs:[];o.produtos.forEach(p=>{if(!Array.isArray(p.imgs))p.imgs=p.img?[p.img]:[];delete p.img;if(p.desc==null)p.desc='';if(p.codigo==null)p.codigo='';if(p.estoque==null)p.estoque='';if(p.destaque==null)p.destaque=false;if(!Array.isArray(p.numeros))p.numeros=[];p.numeros=p.numeros.map(x=>typeof x==='string'?{num:x,estoque:''}:{num:(x.num!=null?x.num:''),estoque:(x.estoque!=null?x.estoque:'')});});});
+  if(!c.categorias.length){const _s=new Set();(c.campanhas||[]).forEach(o=>(o.produtos||[]).forEach(p=>{if(p.cat)_s.add(p.cat);}));c.categorias=[..._s];}
   return c;
 }
 function lerDados(){ try{return normalizar(JSON.parse(document.getElementById('dados').textContent));}catch(e){return normalizar({});} }
@@ -504,7 +526,7 @@ function renderNumero(id){const p=prods().find(x=>x.id==id);document.getElementB
 function confirmarNumero(){fecharNumero();abrirGaveta();}
 function abrirBrindeInfo(){const b=campBrinde();document.getElementById('mbNome').textContent=b.nome||'Brinde especial';document.getElementById('mbFoto').innerHTML=b.img?`<img src="${b.img}">`:emojiCamp();document.getElementById('mbRegras').textContent=b.regras||('Faça um pedido de '+fmt(b.valorMinimo)+' ou mais e ganhe seu brinde grátis! 💎');document.getElementById('overlayBrinde').classList.add('aberto');document.getElementById('modalBrinde').classList.add('aberto');}
 function fecharBrindeInfo(){document.getElementById('overlayBrinde').classList.remove('aberto');document.getElementById('modalBrinde').classList.remove('aberto');}
-function registrarPedido(){const url=CONFIG.integra&&CONFIG.integra.pedidosWebhook;if(!url)return;const itens=Object.entries(carrinho).filter(([k])=>k!=='brinde').map(([k,e])=>{const info=itemInfo(e);return {nome:info.nome,codigo:info.codigo,qtd:e.qtd,preco:info.preco};});const payload={data:new Date().toISOString(),campanha:MODO,vendedora:VENDEDORA.nome,total:totalFinal(),subtotal:subtotalItens(),descontoPct:descProgPct(),brinde:!!carrinho['brinde'],catalogo:querCatalogo===true?'sim':querCatalogo===false?'nao':null,itens};try{fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true}).catch(()=>{});}catch(e){}}
+function registrarPedido(){try{const itens=Object.entries(carrinho).filter(([k])=>k!=='brinde').map(([k,e])=>{const info=itemInfo(e);return {nome:info.nome,codigo:info.codigo,qtd:e.qtd,preco:info.preco};});const payload={campanha:MODO,vendedora:VENDEDORA.nome,total:totalFinal(),subtotal:subtotalItens(),desconto_pct:descProgPct(),brinde:!!carrinho['brinde'],catalogo:querCatalogo===true?'sim':querCatalogo===false?'nao':null,itens};fetch(`${SUPA_URL}/rest/v1/pedidos`,{method:'POST',headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true}).catch(()=>{});}catch(e){}}
 function finalizar(){if(countItens()===0)return;registrarPedido();const linhas=Object.entries(carrinho).map(([k,e])=>{const info=itemInfo(e);return info.brinde?`🎁 BRINDE: ${campBrinde().nome} (grátis)`:`• ${e.qtd}x ${info.nome}${info.codigo?` [cód: ${info.codigo}]`:''} — ${fmt(info.preco)} (un)`;}).join("\n");const cat=querCatalogo===true?"SIM, quero ver o catálogo completo 📖":querCatalogo===false?"Não, por enquanto só essas peças":"Não respondeu";const _tot=descProgPct()>0?`💰 Subtotal: ${fmt(subtotalItens())}\n🎉 Desconto ${descProgPct()}%: -${fmt(descProgValor())}\n✅ Total: ${fmt(totalFinal())}`:`💰 Total: ${fmt(totalFinal())}`;const msg=`Olá, ${VENDEDORA.nome}! 💍\nVim pelo link de ofertas e quero fazer meu pedido:\n\n${linhas}\n\n${_tot}\n\n📖 Catálogo completo: ${cat}`;window.open(`https://wa.me/${VENDEDORA.whatsapp}?text=${encodeURIComponent(msg)}`,"_blank");}
 
 /* ===================== EDITOR ===================== */
@@ -526,13 +548,13 @@ function campListHTML(){
 }
 function editarCampanha(i){campSel=i;subAba='produtos';prodSel=null;prodBusca='';renderMain();window.scrollTo(0,0);}
 function setSubAba(a){subAba=a;prodSel=null;renderMain();window.scrollTo(0,0);}
-function novaCampanha(){const base='Campanha '+(working.campanhas.length+1);let slug=slugify(base);const usados=working.campanhas.map(c=>c.slug);while(usados.includes(slug))slug+='-2';working.campanhas.push({slug,nome:base,url:"",ogTitulo:"Estação da Prata",ogDescricao:"",banner:"",texto:{selo:"",titulo:base,desconto:"ATÉ 49% DE DESCONTO!!",sub:""},produtos:[],brinde:{ativo:false,nome:"Brinde especial",valorMinimo:1000,img:"",regras:""},faixas:[]});campSel=working.campanhas.length-1;renderMain();window.scrollTo(0,0);}
+function novaCampanha(){const base='Campanha '+(working.campanhas.length+1);let slug=slugify(base);const usados=working.campanhas.map(c=>c.slug);while(usados.includes(slug))slug+='-2';working.campanhas.push({slug,nome:base,url:"",ogTitulo:"Estação da Prata",ogDescricao:"",banner:"",texto:{selo:"",titulo:base,desconto:"ATÉ 49% DE DESCONTO!!",sub:""},produtos:[],brinde:{ativo:false,nome:"Brinde especial",valorMinimo:1000,img:"",regras:""},faixas:[],emojiBrinde:"💎",corFundo:"",corSelo:"",estoqueBaixo:3,vitrine:{tipo:"nenhum",imgs:[]}});campSel=working.campanhas.length-1;renderMain();window.scrollTo(0,0);}
 function duplicarCampanha(i){const nova=clone(working.campanhas[i]);nova.nome=nova.nome+' (cópia)';let slug=slugify(nova.nome);const usados=working.campanhas.map(c=>c.slug);while(usados.includes(slug))slug+='-2';nova.slug=slug;working.campanhas.splice(i+1,0,nova);renderMain();toast('Campanha duplicada! ⧉');}
 function excluirCampanha(i){if(working.campanhas.length<=1){toast('Precisa ter pelo menos uma campanha.');return;}if(confirm('Excluir a campanha "'+working.campanhas[i].nome+'"? As outras não são afetadas.')){working.campanhas.splice(i,1);campSel=null;renderMain();}}
 
 /* ----- CAMPANHAS: editor de uma ----- */
 function campEditorHTML(i){
-  const c=working.campanhas[i],t=c.texto;
+  const c=working.campanhas[i];c.texto=c.texto||{};c.vitrine=c.vitrine||{tipo:'nenhum',imgs:[]};if(!Array.isArray(c.vitrine.imgs))c.vitrine.imgs=[];if(!c.vitrine.tipo)c.vitrine.tipo='nenhum';c.brinde=c.brinde||{ativo:false,nome:'Brinde especial',valorMinimo:1000,img:'',regras:''};c.faixas=Array.isArray(c.faixas)?c.faixas:[];if(c.emojiBrinde==null)c.emojiBrinde='💎';if(c.corFundo==null)c.corFundo='';if(c.corSelo==null)c.corSelo='';if(c.estoqueBaixo==null)c.estoqueBaixo=3;const t=c.texto;
   const outras=working.campanhas.map((x,j)=>j===i?'':`<option value="${j}">${escH(x.nome)}</option>`).join("");
   const temOutras=working.campanhas.length>1;
   const back=`<button class="btn-voltar" onclick="voltarLista()">← Todas as campanhas</button>`;
@@ -581,7 +603,7 @@ function copiarPecas(i){const sel=document.getElementById('copySel');const j=sel
 function copiarTextos(i){const sel=document.getElementById('copySel');const j=sel.value;if(j===''){toast('Escolha uma campanha em "Copiar de".');return;}if(confirm('Copiar os textos de "'+working.campanhas[j].nome+'"?')){working.campanhas[i].texto=clone(working.campanhas[j].texto);renderMain();}}
 
 function edProds(){return working.campanhas[campSel].produtos;}
-function renderProdArea(){const alvo=document.getElementById('prodArea');if(!alvo)return;if(prodSel==null){alvo.innerHTML=prodListHTML();renderProdLinhas();}else{alvo.innerHTML=prodEditorHTML(prodSel);renderNumRows(prodSel);}}
+function renderProdArea(){const alvo=document.getElementById('prodArea');if(!alvo)return;alvo.innerHTML=prodListHTML();renderProdLinhas();if(prodSel!=null)abrirProdModal(prodSel);}
 function prodListHTML(){
   const outras=working.campanhas.map((x,j)=>j===campSel?'':`<option value="${j}">${escH(x.nome)}</option>`).join("");
   const temOutras=working.campanhas.length>1;
@@ -606,33 +628,32 @@ function renderProdLinhas(){
     return `<div class="prod-lin"><div class="pl-foto">${foto}</div><div class="pl-info" onclick="editarProduto(${idx})"><div class="pl-nome">${escH(p.nome)||'(sem nome)'}${p.destaque?' ⭐':''}</div><div class="pl-meta">${p.codigo?('cód '+escH(p.codigo)+' · '):''}${fmt(p.precoPor)}${badge}</div></div><div class="pl-acoes"><button onclick="editarProduto(${idx})">✏️</button><button onclick="duplicarProduto(${idx})">⧉</button><button onclick="excluirProduto(${idx})">🗑</button></div></div>`;
   }).join("");
 }
-function prodEditorHTML(j){const p=edProds()[j];const desc=p.precoDe>0?Math.round((1-p.precoPor/p.precoDe)*100):0;const thumbs=(p.imgs||[]).map((src,k)=>`<div class="ed-thumb"><img src="${src}"><button class="x" onclick="removerFoto(${j},${k})">×</button></div>`).join("");const cats=[...new Set(edProds().map(x=>x.cat).filter(Boolean))];const dl='<datalist id="catlist">'+cats.map(x=>`<option value="${escA(x)}">`).join('')+'</datalist>';
-return `<button class="btn-voltar" onclick="voltarProdList()">← Todas as peças</button>${dl}
-<div class="ed-prod">
-<button class="btn-banco" onclick="abrirBanco(${j})">📂 Escolher do banco de fotos</button>
-<div class="ed-thumbs">${thumbs}<label class="ed-thumb add"><span class="mais">+</span><span>enviar</span><input type="file" accept="image/*" multiple onchange="enviarFotos(${j},this)"></label></div>
-<div class="campo"><label>Nome da peça</label><input value="${escA(p.nome)}" oninput="edProds()[${j}].nome=this.value"></div>
-<div class="campo"><label>Código (interno · só a vendedora vê)</label><div class="dica">Preenche sozinho pelo nome da foto, se estiver vazio.</div><input value="${escA(p.codigo)}" oninput="edProds()[${j}].codigo=this.value"></div>
-<div class="campo"><label>Categoria</label><input list="catlist" value="${escA(p.cat)}" oninput="edProds()[${j}].cat=this.value"></div>
-<div class="campo"><label>Descrição</label><textarea oninput="edProds()[${j}].desc=this.value" placeholder="Ex: Prata 925, banho de ródio...">${escH(p.desc)}</textarea></div>
-<div class="linha2"><div class="campo"><label>Preço de (riscado)</label><input type="number" step="0.01" value="${p.precoDe}" oninput="edProds()[${j}].precoDe=parseFloat(this.value)||0;descLive(${j})"></div><div class="campo"><label>Preço por (oferta)</label><input type="number" step="0.01" value="${p.precoPor}" oninput="edProds()[${j}].precoPor=parseFloat(this.value)||0;descLive(${j})"></div></div>
-<div class="campo"><label>Estoque (peças sem número)</label><div class="dica">Vazio = sempre disponível. Se usar números abaixo, o estoque é por número.</div><input type="number" value="${p.estoque}" oninput="edProds()[${j}].estoque=this.value===''?'':(parseInt(this.value)||0)"></div>
-<div class="campo"><label>Números do anel (opcional)</label><div class="dica">Cada número com seu estoque.</div><div id="numRows${j}"></div><button class="faixa-add" onclick="addNumRow(${j})">+ número</button></div>
-<label class="chk" style="margin-top:6px"><input type="checkbox" ${p.destaque?'checked':''} onchange="edProds()[${j}].destaque=this.checked"> ⭐ Marcar como destaque</label>
-<div class="desc-linha"><span class="desc-txt" id="descTxt${j}">${desc>0?`-${desc}% de desconto`:''}</span><button class="remover-prod" onclick="removerProduto(${j})">🗑 remover peça</button></div>
-</div>`;}
-function editarProduto(j){prodSel=j;renderMain();window.scrollTo(0,0);}
-function voltarProdList(){prodSel=null;renderProdArea();window.scrollTo(0,0);}
+function prodEditorBody(j){const p=edProds()[j];const desc=p.precoDe>0?Math.round((1-p.precoPor/p.precoDe)*100):0;const thumbs=(p.imgs||[]).map((src,k)=>`<div class="ed-thumb"><img src="${src}"><button class="x" onclick="removerFoto(${j},${k})">×</button></div>`).join("");const cats=(working.categorias||[]);const opts=cats.map(x=>`<option value="${escA(x)}" ${p.cat===x?'selected':''}>${escH(x)}</option>`).join('');const extra=(p.cat&&!cats.includes(p.cat))?`<option value="${escA(p.cat)}" selected>${escH(p.cat)}</option>`:'';const mostrarNum=ehAnel(p.cat)||(p.numeros&&p.numeros.length>0);return `<div class="ed-prod"><button class="btn-banco" onclick="abrirBanco(${j})">📂 Escolher do banco de fotos</button><div class="ed-thumbs">${thumbs}<label class="ed-thumb add"><span class="mais">+</span><span>enviar</span><input type="file" accept="image/*" multiple onchange="enviarFotos(${j},this)"></label></div><div class="campo"><label>Nome da peça</label><input value="${escA(p.nome)}" oninput="edProds()[${j}].nome=this.value;pmTit(${j})"></div><div class="campo"><label>Código (interno · só a vendedora vê)</label><div class="dica">Preenche sozinho pelo nome da foto, se estiver vazio.</div><input value="${escA(p.codigo)}" oninput="edProds()[${j}].codigo=this.value"></div><div class="campo"><label>Categoria</label><select class="cat-sel" onchange="mudarCategoria(${j},this.value)"><option value="">— sem categoria —</option>${opts}${extra}<option value="__nova">➕ nova categoria</option></select></div><div class="campo"><label>Descrição</label><textarea oninput="edProds()[${j}].desc=this.value" placeholder="Ex: Prata 925, banho de ródio...">${escH(p.desc)}</textarea></div><div class="linha2"><div class="campo"><label>Preço de (riscado)</label><input type="number" step="0.01" value="${p.precoDe}" oninput="edProds()[${j}].precoDe=parseFloat(this.value)||0;descLive(${j})"></div><div class="campo"><label>Preço por (oferta)</label><input type="number" step="0.01" value="${p.precoPor}" oninput="edProds()[${j}].precoPor=parseFloat(this.value)||0;descLive(${j})"></div></div><div class="campo"><label>Estoque${mostrarNum?' (peças sem número)':''}</label><div class="dica">Vazio = sempre disponível.</div><input type="number" value="${p.estoque}" oninput="edProds()[${j}].estoque=this.value===''?'':(parseInt(this.value)||0)"></div>${mostrarNum?`<div class="campo"><label>Números do anel</label><div class="dica">Cada número com seu estoque.</div><div id="numRows${j}"></div><button class="faixa-add" onclick="addNumRow(${j})">+ número</button></div>`:''}<label class="chk" style="margin-top:6px"><input type="checkbox" ${p.destaque?'checked':''} onchange="edProds()[${j}].destaque=this.checked"> ⭐ Marcar como destaque</label><div class="desc-linha"><span class="desc-txt" id="descTxt${j}">${desc>0?`-${desc}% de desconto`:''}</span><button class="remover-prod" onclick="removerProduto(${j})">🗑 remover peça</button></div></div>`;}
+function editarProduto(j){abrirProdModal(j);}
+function voltarProdList(){fecharProdModal();}
 function duplicarProduto(j){const c=clone(edProds()[j]);const ids=edProds().map(p=>p.id);c.id=(ids.length?Math.max(...ids):0)+1;c.nome=(c.nome||'')+' (cópia)';edProds().splice(j+1,0,c);renderProdLinhas();toast('Peça duplicada! ⧉');}
 function excluirProduto(j){if(confirm('Excluir esta peça?')){edProds().splice(j,1);renderProdLinhas();}}
+function abrirProdModal(j){prodSel=j;const body=document.getElementById('pmBody');if(!body)return;body.innerHTML=prodEditorBody(j);renderNumRows(j);pmTit(j);document.getElementById('prodModalOv').classList.add('aberto');document.getElementById('prodModal').classList.add('aberto');body.scrollTop=0;}
+function fecharProdModal(){prodSel=null;const ov=document.getElementById('prodModalOv'),m=document.getElementById('prodModal');if(ov)ov.classList.remove('aberto');if(m)m.classList.remove('aberto');renderProdLinhas();}
+function refreshProdEditor(){if(prodSel!=null&&document.getElementById('prodModal')&&document.getElementById('prodModal').classList.contains('aberto')){const body=document.getElementById('pmBody');body.innerHTML=prodEditorBody(prodSel);renderNumRows(prodSel);pmTit(prodSel);}else{renderProdLinhas();}}
+function pmTit(j){const t=document.getElementById('pmTitulo');if(t)t.textContent=(edProds()[j]&&edProds()[j].nome)||'Peça';}
+function salvarENovo(){const idx=addProdutoRaw();abrirProdModal(idx);}
+function duplicarAtual(){if(prodSel==null)return;const c=clone(edProds()[prodSel]);const ids=edProds().map(p=>p.id);c.id=(ids.length?Math.max(...ids):0)+1;c.nome=(c.nome||'')+' (cópia)';edProds().splice(prodSel+1,0,c);abrirProdModal(prodSel+1);toast('Peça duplicada! ⧉');}
+function ehAnel(cat){return /an[eé]is|anel/i.test(cat||'');}
+function adicionarCategoria(n){n=(n||'').trim();if(!n)return false;if(!Array.isArray(working.categorias))working.categorias=[];if(!working.categorias.includes(n))working.categorias.push(n);return true;}
+function mudarCategoria(j,v){if(v==='__nova'){const n=prompt('Nome da nova categoria:');if(n&&adicionarCategoria(n)){edProds()[j].cat=n.trim();}}else{edProds()[j].cat=v;}refreshProdEditor();}
+function renderCatList(){const el=document.getElementById('catList');if(!el)return;const cats=working.categorias||[];el.innerHTML=cats.length?cats.map((c,i)=>`<span class="cat-chip">${escH(c)}<button onclick="removerCategoria(${i})">×</button></span>`).join(''):'<div style="font-size:12px;color:var(--cinza);margin-bottom:6px">Nenhuma categoria ainda.</div>';}
+function addCategoriaConfig(){const inp=document.getElementById('catNova');if(adicionarCategoria(inp.value)){inp.value='';renderCatList();}}
+function removerCategoria(i){working.categorias.splice(i,1);renderCatList();}
 function descLive(i){const p=edProds()[i];const d=p.precoDe>0?Math.round((1-p.precoPor/p.precoDe)*100):0;const el=document.getElementById('descTxt'+i);if(el)el.textContent=d>0?`-${d}% de desconto`:'';}
-async function enviarFotos(i,inp){if(!inp.files.length)return;toast('Dica: prefira o "banco de fotos" — fica mais leve. Otimizando...');const arr=[...inp.files];for(const f of arr){const d=await comprimir(f);if(d)edProds()[i].imgs.push(d);}const p=edProds()[i];if(!p.codigo&&arr.length){p.codigo=arr[0].name.replace(/\.[a-z0-9]+$/i,'');}renderProdArea();}
-function removerFoto(i,j){edProds()[i].imgs.splice(j,1);renderProdArea();}
-function addProduto(){const ids=edProds().map(p=>p.id);const novo=(ids.length?Math.max(...ids):0)+1;edProds().push({id:novo,cat:"",nome:"Nova peça",desc:"",codigo:"",precoDe:0,precoPor:0,estoque:"",imgs:[],numeros:[],destaque:false});prodSel=edProds().length-1;renderMain();window.scrollTo(0,0);}
-function removerProduto(i){if(confirm('Remover esta peça?')){edProds().splice(i,1);prodSel=null;renderMain();}}
+async function enviarFotos(i,inp){if(!inp.files.length)return;toast('Dica: prefira o "banco de fotos" — fica mais leve. Otimizando...');const arr=[...inp.files];for(const f of arr){const d=await comprimir(f);if(d)edProds()[i].imgs.push(d);}const p=edProds()[i];if(!p.codigo&&arr.length){p.codigo=arr[0].name.replace(/\.[a-z0-9]+$/i,'');}refreshProdEditor();}
+function removerFoto(i,j){edProds()[i].imgs.splice(j,1);refreshProdEditor();}
+function addProdutoRaw(){const ids=edProds().map(p=>p.id);const novo=(ids.length?Math.max(...ids):0)+1;edProds().push({id:novo,cat:"",nome:"Nova peça",desc:"",codigo:"",precoDe:0,precoPor:0,estoque:"",imgs:[],numeros:[],destaque:false});return edProds().length-1;}
+function addProduto(){abrirProdModal(addProdutoRaw());}
+function removerProduto(i){if(confirm('Remover esta peça?')){edProds().splice(i,1);fecharProdModal();}}
 async function enviarBannerCamp(i){if(!i.files[0])return;toast('Otimizando banner...');working.campanhas[campSel].banner=await comprimir(i.files[0],1200,.85);renderMain();}
 function removerBannerCamp(){working.campanhas[campSel].banner="";renderMain();}
-function aplicarDescontoGeral(){const inp=document.getElementById('descGeral');const pct=parseFloat(inp.value);if(!(pct>0&&pct<100)){toast('Digite uma % entre 1 e 99.');return;}if(!confirm('Aplicar '+pct+'% em TODAS as peças desta campanha? (calculado do preço cheio)'))return;let n=0;edProds().forEach(p=>{if(p.precoDe>0){p.precoPor=Math.round(p.precoDe*(1-pct/100)*100)/100;n++;}});renderProdArea();toast(n+' peça(s) com '+pct+'% de desconto! 💰');}
+function aplicarDescontoGeral(){const inp=document.getElementById('descGeral');const pct=parseFloat(inp.value);if(!(pct>0&&pct<100)){toast('Digite uma % entre 1 e 99.');return;}if(!confirm('Aplicar '+pct+'% em TODAS as peças desta campanha? (calculado do preço cheio)'))return;let n=0;edProds().forEach(p=>{if(p.precoDe>0){p.precoPor=Math.round(p.precoDe*(1-pct/100)*100)/100;n++;}});renderProdLinhas();toast(n+' peça(s) com '+pct+'% de desconto! 💰');}
 function brindeCampHTML(i){const b=working.campanhas[i].brinde;return `<div class="ed-bloco"><div class="bsub">Diamante na tela inicial e resgate na sacola — só nesta campanha.</div><div class="chk"><input type="checkbox" id="bc_ativo" ${b.ativo?'checked':''} onchange="working.campanhas[${i}].brinde.ativo=this.checked"><label for="bc_ativo">Brinde ativado nesta campanha</label></div><div class="campo"><label>Valor mínimo (R$)</label><input type="number" step="1" value="${b.valorMinimo}" oninput="working.campanhas[${i}].brinde.valorMinimo=parseFloat(this.value)||0"></div><div class="campo"><label>Nome do brinde</label><input value="${escA(b.nome)}" oninput="working.campanhas[${i}].brinde.nome=this.value"></div><div class="campo"><label>Foto do brinde</label><div class="ed-thumb add quad" onclick="document.getElementById('brindeCampInput').click()">${b.img?`<img src="${b.img}" style="width:100%;height:100%;object-fit:cover">`:`<span class="mais">+</span><span>foto</span>`}</div><input type="file" id="brindeCampInput" accept="image/*" onchange="enviarBrindeCamp(this)" style="display:none"></div><div class="campo"><label>Regrinhas</label><textarea oninput="working.campanhas[${i}].brinde.regras=this.value">${escH(b.regras)}</textarea></div></div>`;}
 async function enviarBrindeCamp(inp){if(!inp.files[0])return;working.campanhas[campSel].brinde.img=await comprimir(inp.files[0],600,.82);renderMain();}
 function renderFaixaList(){const alvo=document.getElementById('faixaList');if(!alvo)return;const fx=working.campanhas[campSel].faixas;alvo.innerHTML=fx.length?fx.map((f,j)=>`<div class="faixa-row"><input type="number" placeholder="Acima de R$" value="${f.minimo||''}" oninput="working.campanhas[${campSel}].faixas[${j}].minimo=parseFloat(this.value)||0"><input type="number" placeholder="% off" value="${f.percentual||''}" oninput="working.campanhas[${campSel}].faixas[${j}].percentual=parseFloat(this.value)||0"><button class="rmf" onclick="removerFaixa(${j})">×</button></div>`).join(''):'<div class="prod-vazio" style="margin-bottom:10px">Nenhuma faixa ainda. Ex: acima de 300 → 5%.</div>';}
@@ -661,7 +682,7 @@ async function abrirBanco(i,alvo){
 }
 function renderBanco(){document.getElementById('bancoCorpo').innerHTML='<div class="banco-grid">'+bancoFotos.map((u,k)=>`<div class="banco-item ${bancoSel[k]?'sel':''}" onclick="toggleBanco(${k})"><img src="${u}" loading="lazy"><div class="ck">✓</div></div>`).join('')+'</div>';}
 function toggleBanco(k){if(bancoSel[k])delete bancoSel[k];else bancoSel[k]=1;document.getElementById('bancoAdd').disabled=Object.keys(bancoSel).length===0;renderBanco();}
-function usarSelecionadas(){const escolhidas=Object.keys(bancoSel).map(k=>bancoFotos[k]);if(bancoAlvo==='vitrine'){const v=working.campanhas[campSel].vitrine;escolhidas.forEach(u=>{if(!v.imgs.includes(u))v.imgs.push(u);});fecharBanco();renderMain();toast('Imagens da vitrine adicionadas! 📂');return;}const p=working.campanhas[campSel].produtos[bancoProdIdx];escolhidas.forEach(u=>{if(!p.imgs.includes(u))p.imgs.push(u);});if(!p.codigo&&escolhidas.length){try{let nome=decodeURIComponent(escolhidas[0].split('/').pop());nome=nome.replace(/\.[a-z0-9]+$/i,'');p.codigo=nome;}catch(e){}}fecharBanco();renderProdList();toast(p.codigo?('Fotos adicionadas · código: '+p.codigo+' 📂'):'Fotos adicionadas do banco! 📂');}
+function usarSelecionadas(){const escolhidas=Object.keys(bancoSel).map(k=>bancoFotos[k]);if(bancoAlvo==='vitrine'){const v=working.campanhas[campSel].vitrine;escolhidas.forEach(u=>{if(!v.imgs.includes(u))v.imgs.push(u);});fecharBanco();renderMain();toast('Imagens da vitrine adicionadas! 📂');return;}const p=working.campanhas[campSel].produtos[bancoProdIdx];escolhidas.forEach(u=>{if(!p.imgs.includes(u))p.imgs.push(u);});if(!p.codigo&&escolhidas.length){try{let nome=decodeURIComponent(escolhidas[0].split('/').pop());nome=nome.replace(/\.[a-z0-9]+$/i,'');p.codigo=nome;}catch(e){}}fecharBanco();refreshProdEditor();toast(p.codigo?('Fotos adicionadas · código: '+p.codigo+' 📂'):'Fotos adicionadas do banco! 📂');}
 function fecharBanco(){document.getElementById('bancoOverlay').classList.remove('aberto');document.getElementById('bancoModal').classList.remove('aberto');}
 function renderNumRows(i){const alvo=document.getElementById('numRows'+i);if(!alvo)return;const p=edProds()[i];alvo.innerHTML=(p.numeros||[]).map((o,j)=>`<div class="faixa-row"><input placeholder="nº" value="${escA(o.num)}" oninput="edProds()[${i}].numeros[${j}].num=this.value.trim()"><input type="number" placeholder="estoque" value="${o.estoque}" oninput="edProds()[${i}].numeros[${j}].estoque=this.value===''?'':(parseInt(this.value)||0)"><button class="rmf" onclick="removerNumRow(${i},${j})">×</button></div>`).join('');}
 function addNumRow(i){edProds()[i].numeros.push({num:'',estoque:''});renderNumRows(i);}
@@ -677,6 +698,7 @@ function configHTML(){const ig=working.integra;return `
     <div class="campo"><label>Favicon</label><div class="ed-thumb add quad" onclick="document.getElementById('faviconInput').click()" id="faviconBox"></div><input type="file" id="faviconInput" accept="image/*" onchange="enviarFavicon(this)" style="display:none"></div>
   </div>
   <div class="ed-bloco"><h2>👩 Vendedoras</h2><div id="edVendedoras"></div></div>
+  <div class="ed-bloco"><h2>🏷️ Categorias</h2><div class="bsub">Crie uma vez e reutilize nas peças (sem digitar toda vez).</div><div id="catList"></div><div class="cat-add"><input id="catNova" placeholder="Nova categoria" onkeydown="if(event.key==='Enter')addCategoriaConfig()"><button onclick="addCategoriaConfig()">+ Adicionar</button></div></div>
   <div class="ed-bloco"><h2>🔌 Integrações (Dashboard)</h2><div class="bsub">Para o Dashboard funcionar, o site precisa enviar e ler os pedidos (ex: n8n/Supabase).</div>
     <div class="campo"><label>Webhook de pedidos (POST)</label><div class="dica">O site envia cada pedido finalizado pra cá.</div><input value="${escA(ig.pedidosWebhook)}" placeholder="https://...seu-n8n/webhook/pedidos" oninput="working.integra.pedidosWebhook=this.value.trim()"></div>
     <div class="campo"><label>URL dos pedidos (GET) — pro Dashboard ler</label><div class="dica">Deve retornar a lista de pedidos em JSON.</div><input value="${escA(ig.dashboardUrl)}" placeholder="https://...seus-pedidos.json" oninput="working.integra.dashboardUrl=this.value.trim()"></div>
@@ -686,7 +708,7 @@ function configHTML(){const ig=working.integra;return `
     <div class="campo"><label>Repositório (usuário/repo)</label><div class="dica">Ex: estacaodaprata/estacaodaprata</div><input value="${escA(ig.bancoRepo)}" placeholder="usuario/repositorio" oninput="working.integra.bancoRepo=this.value.trim()"></div>
     <div class="campo"><label>Nome da pasta das fotos</label><input value="${escA(ig.bancoPasta)}" placeholder="fotos" oninput="working.integra.bancoPasta=this.value.trim().replace(/^\/+|\/+$/g,'')"></div>
   </div>`;}
-function iniciarConfig(){const lb=document.getElementById('logoBox');if(working.logo){lb.innerHTML=`<img src="${working.logo}" style="width:100%;height:100%;object-fit:contain">`;document.getElementById('removerLogo').style.display='inline-block';}else{lb.innerHTML=`<span class="mais">+</span><span>Enviar logo</span>`;document.getElementById('removerLogo').style.display='none';}document.getElementById('faviconBox').innerHTML=working.favicon?`<img src="${working.favicon}" style="width:100%;height:100%;object-fit:cover">`:`<span class="mais">+</span><span>ícone</span>`;renderEdVendedoras();}
+function iniciarConfig(){const lb=document.getElementById('logoBox');if(working.logo){lb.innerHTML=`<img src="${working.logo}" style="width:100%;height:100%;object-fit:contain">`;document.getElementById('removerLogo').style.display='inline-block';}else{lb.innerHTML=`<span class="mais">+</span><span>Enviar logo</span>`;document.getElementById('removerLogo').style.display='none';}document.getElementById('faviconBox').innerHTML=working.favicon?`<img src="${working.favicon}" style="width:100%;height:100%;object-fit:cover">`:`<span class="mais">+</span><span>ícone</span>`;renderEdVendedoras();renderCatList();}
 async function enviarLogo(i){if(!i.files[0])return;working.logo=await lerArquivo(i.files[0]);iniciarConfig();}
 function removerLogo(){working.logo="";iniciarConfig();}
 async function enviarFavicon(i){if(!i.files[0])return;working.favicon=await comprimir(i.files[0],128,.9);iniciarConfig();}
@@ -708,7 +730,7 @@ function dashVazioHTML(){return `<div class="dash-vazio">📊 <b>Ainda não há 
     ]
   }
 ]</pre></div>`;}
-async function carregarDashboard(){const url=working.integra.dashboardUrl;const box=document.getElementById('dashBody');if(!box)return;if(!url){box.innerHTML=dashVazioHTML();return;}box.innerHTML='<p style="text-align:center;color:var(--cinza);padding:30px">Carregando...</p>';try{const r=await fetch(url);const data=await r.json();dashDados=Array.isArray(data)?data:(data.pedidos||data.orders||[]);box.innerHTML=dashRender();}catch(e){box.innerHTML='<div class="dash-erro">Não consegui ler os pedidos dessa URL. Confira o endereço e se ele retorna a lista em JSON.</div>'+dashVazioHTML();}}
+async function carregarDashboard(){const box=document.getElementById('dashBody');if(!box)return;box.innerHTML='<p style="text-align:center;color:var(--cinza);padding:30px">Carregando pedidos...</p>';try{const r=await fetch(`${SUPA_URL}/rest/v1/pedidos?select=*&order=criado_em.desc`,{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});if(!r.ok)throw new Error('http '+r.status);const arr=await r.json();dashDados=arr.map(p=>({data:p.criado_em,campanha:p.campanha,vendedora:p.vendedora,total:Number(p.total)||0,brinde:!!p.brinde,catalogo:p.catalogo,itens:p.itens||[]}));box.innerHTML=dashRender();}catch(e){box.innerHTML='<div class="dash-erro">Não consegui carregar os pedidos agora.</div>'+dashVazioHTML();}}
 function dashRender(){
   let ped=dashDados||[];
   if(dashFiltro!=='todos'){const dias=parseInt(dashFiltro);const lim=Date.now()-dias*864e5;ped=ped.filter(p=>{const t=Date.parse(p.data);return isNaN(t)?true:t>=lim;});}

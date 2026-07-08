@@ -698,10 +698,10 @@ const SUPA_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 const SUPA_SENHA='prata2026ana99';
 const SUPA_TABELA='config_site';
 const SUPA_ID='estacao-da-prata';
-let _saving=false,_pendente=false,_ultimoSalvo='',_cloudTinha=false;
+let _saving=false,_pendente=false,_ultimoSalvo='',_cloudTinha=false,_cloudErro=false;
 async function nuvemCarregar(){try{const r=await fetch(`${SUPA_URL}/rest/v1/${SUPA_TABELA}?id=eq.${SUPA_ID}&select=dados`,{headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY}});if(!r.ok)throw new Error('http '+r.status);const arr=await r.json();return (arr&&arr[0]&&arr[0].dados)?arr[0].dados:null;}catch(e){console.warn('nuvem carregar',e);return undefined;}}
 function statusSalvar(estado){const el=document.getElementById('saveStatus');if(!el)return;el.className='save-status '+estado;el.style.opacity='1';el.innerHTML=(estado==='salvando'?'<span class="bola"></span>Salvando...':estado==='salvo'?'<span class="bola"></span>Salvo na nuvem ✓':'<span class="bola"></span>Erro ao salvar');if(estado==='salvo')setTimeout(()=>{if(el)el.style.opacity='0';},2200);}
-async function nuvemSalvarAgora(){if(_saving){_pendente=true;return;}_saving=true;statusSalvar('salvando');try{const body=JSON.stringify({id:SUPA_ID,dados:working,atualizado_em:new Date().toISOString()});if(body.length>1500000){statusSalvar('erro');console.warn('payload grande',body.length);if(typeof toast==='function')toast('Fotos pesadas demais — use o "banco de fotos" em vez de enviar do computador.');_saving=false;return;}const r=await fetch(`${SUPA_URL}/rest/v1/${SUPA_TABELA}?on_conflict=id`,{method:'POST',headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates'},body,keepalive:true});if(!r.ok)throw new Error('http '+r.status);statusSalvar('salvo');}catch(e){console.warn('nuvem salvar',e);statusSalvar('erro');}_saving=false;if(_pendente){_pendente=false;nuvemSalvarAgora();}}
+async function nuvemSalvarAgora(){if(_cloudErro){statusSalvar('erro');return;}if(_saving){_pendente=true;return;}_saving=true;statusSalvar('salvando');try{const body=JSON.stringify({id:SUPA_ID,dados:working,atualizado_em:new Date().toISOString()});if(body.length>1500000){statusSalvar('erro');console.warn('payload grande',body.length);if(typeof toast==='function')toast('Fotos pesadas demais — use o "banco de fotos" em vez de enviar do computador.');_saving=false;return;}const r=await fetch(`${SUPA_URL}/rest/v1/${SUPA_TABELA}?on_conflict=id`,{method:'POST',headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json',Prefer:'resolution=merge-duplicates'},body,keepalive:true});if(!r.ok)throw new Error('http '+r.status);statusSalvar('salvo');}catch(e){console.warn('nuvem salvar',e);statusSalvar('erro');}_saving=false;if(_pendente){_pendente=false;nuvemSalvarAgora();}}
 function talvezSalvar(){if(!working)return;const s=JSON.stringify(working);if(s===_ultimoSalvo)return;_ultimoSalvo=s;nuvemSalvarAgora();}
 const campBySlug=(c,slug)=>(c.campanhas||[]).find(x=>x.slug===slug)||(c.campanhas||[])[0];
 const prods=()=>{const c=campBySlug(CONFIG,MODO);return (c&&c.produtos)||[];};
@@ -1143,13 +1143,14 @@ const DRAFT_KEY='estacaoprata_rascunho_v4';
 function salvarRascunho(){talvezSalvar();}
 function mostrarLogin(){if(sessionStorage.getItem('promo_auth')==='1'){entrarPainel();return;}const lt=document.getElementById('loginTela');if(lt)lt.style.display='flex';setTimeout(()=>{const s=document.getElementById('loginSenha');if(s)s.focus();},120);}
 function checarSenha(){const v=(document.getElementById('loginSenha').value||'');if(v===SUPA_SENHA){try{sessionStorage.setItem('promo_auth','1');}catch(e){}entrarPainel();}else{document.getElementById('loginErro').textContent='Senha incorreta.';}}
-function entrarPainel(){const lt=document.getElementById('loginTela');if(lt)lt.style.display='none';working=clone(CONFIG);_ultimoSalvo=JSON.stringify(working);iniciarEditor();if(!_cloudTinha){nuvemSalvarAgora();}setInterval(talvezSalvar,2500);document.addEventListener('visibilitychange',talvezSalvar);window.addEventListener('beforeunload',talvezSalvar);}
+function entrarPainel(){const lt=document.getElementById('loginTela');if(lt)lt.style.display='none';working=clone(CONFIG);_ultimoSalvo=JSON.stringify(working);iniciarEditor();if(_cloudErro){statusSalvar('erro');if(typeof toast==='function')toast('⚠️ Não consegui carregar da nuvem. Recarregue a página (F5) antes de editar, para não perder dados.');}else if(!_cloudTinha){nuvemSalvarAgora();}setInterval(talvezSalvar,2500);document.addEventListener('visibilitychange',talvezSalvar);window.addEventListener('beforeunload',talvezSalvar);}
 function descartarRascunho(){document.getElementById('draftBanner').classList.remove('show');}
 
 /* ----- início ----- */
 CONFIG=lerDados();
 (async function(){
   let _cloud=undefined;try{_cloud=await nuvemCarregar();}catch(e){}
+  _cloudErro=(_cloud===undefined);
   if(_cloud){_cloudTinha=true;try{CONFIG=normalizar(_cloud);}catch(e){}}
   if(new URLSearchParams(location.search).has('editarsitepromo')){
     document.body.classList.add('modo-editor');

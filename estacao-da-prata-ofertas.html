@@ -582,6 +582,23 @@ body:not(.preview-on) #visHint{display:none}
   .ml-item.mae{font-size:16px}
   .grade{gap:10px;padding:8px 12px 30px}
 }
+.pubv-row{display:flex;gap:6px;margin-bottom:6px}
+.pubv-row input{flex:1;min-width:0;padding:8px 10px;border:1px solid var(--linha);border-radius:8px;font-size:13px}
+.pubv-row button{width:34px;flex-shrink:0;border:1px solid var(--linha);border-radius:8px;background:#fff}
+.esc-ov{position:fixed;inset:0;z-index:88;background:rgba(23,19,15,.55);opacity:0;visibility:hidden;transition:opacity .2s}
+.esc-ov.aberto{opacity:1;visibility:visible}
+.esc-modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%) scale(.95);z-index:89;background:#fff;border-radius:20px;width:90%;max-width:400px;padding:26px 22px;opacity:0;visibility:hidden;transition:all .25s;box-shadow:var(--sombra);text-align:center}
+.esc-modal.aberto{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+.esc-x{position:absolute;top:10px;right:14px;font-size:24px;color:var(--cinza);background:none}
+.esc-modal h3{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:600;margin-bottom:6px}
+.esc-modal p{font-size:14px;color:var(--preto-suave);margin-bottom:18px}
+.esc-btns{display:flex;flex-direction:column;gap:10px}
+.esc-btns button,.esc-vends button{padding:14px;border-radius:100px;font-size:15px;font-weight:600}
+.esc-sim{background:var(--rose-grad);color:#fff}
+.esc-nao{background:#fff;border:1.5px solid var(--linha);color:var(--preto-suave)}
+.esc-vends{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.esc-vends button{background:#fff;border:1.5px solid var(--rose-claro);color:var(--rose-escuro)}
+.esc-voltar{background:none;color:var(--cinza);font-size:13px;text-decoration:underline}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important;scroll-behavior:auto}}
 </style>
 </head>
@@ -616,6 +633,8 @@ body:not(.preview-on) #visHint{display:none}
   <div class="popup-modal" id="popupModal"><button class="fechar" onclick="fecharPopup()">×</button><div id="popupBody"></div></div>
   <button class="popup-fab" id="popupFab" style="display:none" onclick="abrirPopup()">🎁</button>
   <button class="voltar-topo" id="voltarTopo" onclick="window.scrollTo({top:0,behavior:'smooth'})" aria-label="Voltar ao topo">↑</button>
+  <div class="esc-ov" id="escOv" onclick="fecharEscolha()"></div>
+  <div class="esc-modal" id="escModal"><button class="esc-x" onclick="fecharEscolha()">×</button><div id="escBody"></div></div>
   <div class="menu-ov" id="menuOv" onclick="fecharMenu()"></div>
   <aside class="menu-lat" id="menuLat"><div class="menu-topo"><span>Categorias</span><button onclick="fecharMenu()">×</button></div><div class="menu-corpo" id="menuCorpo"></div></aside>
   <div class="vis-hint" id="visHint">✨ Toque nos textos para editar <button onclick="abrirPainelVisual('fundo')">🎨 Fundo</button></div>
@@ -684,7 +703,7 @@ function normalizar(c){
   c.logo=c.logo||""; c.favicon=c.favicon||"";
   c.integra=c.integra||{}; c.integra.pedidosWebhook=c.integra.pedidosWebhook||""; c.integra.dashboardUrl=c.integra.dashboardUrl||""; c.integra.bancoRepo=c.integra.bancoRepo||""; c.integra.bancoPasta=c.integra.bancoPasta||"fotos";
   c.brinde=c.brinde||{}; if(c.brinde.ativo==null)c.brinde.ativo=true; c.brinde.nome=c.brinde.nome||"Brinde especial"; c.brinde.valorMinimo=c.brinde.valorMinimo||1000; c.brinde.img=c.brinde.img||""; c.brinde.regras=c.brinde.regras||"";
-  c.vendedoras=c.vendedoras||[];c.categorias=Array.isArray(c.categorias)?c.categorias:[];c.aviso=c.aviso||{};c.aviso.ativo=!!c.aviso.ativo;c.aviso.texto=c.aviso.texto||'';c.aviso.corFundo=c.aviso.corFundo||'#17130f';c.aviso.corTexto=c.aviso.corTexto||'#ffffff';c.bancoColunas=c.bancoColunas||3;
+  c.vendedoras=c.vendedoras||[];c.categorias=Array.isArray(c.categorias)?c.categorias:[];c.aviso=c.aviso||{};c.aviso.ativo=!!c.aviso.ativo;c.aviso.texto=c.aviso.texto||'';c.aviso.corFundo=c.aviso.corFundo||'#17130f';c.aviso.corTexto=c.aviso.corTexto||'#ffffff';c.bancoColunas=c.bancoColunas||3;c.publico=c.publico||{};c.publico.central=c.publico.central||'5519981990280';c.publico.vendedoras=(Array.isArray(c.publico.vendedoras)&&c.publico.vendedoras.length)?c.publico.vendedoras:[{nome:'Duda',whatsapp:'5519982699000'},{nome:'Eduarda',whatsapp:'5519984303537'},{nome:'Larissa',whatsapp:'5519983619149'}];
   c.campanhas=Array.isArray(c.campanhas)?c.campanhas:[];
   if(!c.campanhas.length)c.campanhas.push({slug:"especial",nome:"Especiais",url:"",ogTitulo:"Estação da Prata",ogDescricao:"",banner:"",texto:{selo:"",titulo:"",desconto:"",sub:""},produtos:[]});
   const usados={};
@@ -759,7 +778,8 @@ function abrirPainelVisual(key){const c=_c();const titulos={selo:'Selo do topo',
 function setEst2(key,prop,v){const c=_c();c.estilos=c.estilos||{};c.estilos[key]=c.estilos[key]||{};c.estilos[key][prop]=v;reaplicarVisual();}
 function aplicarTema(slug){const c=campBySlug(CONFIG,slug)||{};if(c.fundoGrad){document.body.style.background='linear-gradient(160deg,'+(c.corFundo||'#faf8f7')+','+(c.fundoGradTo||'#f3e6e8')+')';}else{document.body.style.background=c.corFundo||'';}if(c.corSelo){document.documentElement.style.setProperty('--selo',c.corSelo);}else{document.documentElement.style.removeProperty('--selo');}}
 function renderVitrine(slug){const c=campBySlug(CONFIG,slug)||{};const v=c.vitrine||{tipo:'nenhum',imgs:[]};const el=document.getElementById('vitrine');if(!el)return;if(!v.imgs||!v.imgs.length||v.tipo==='nenhum'){el.className='';el.innerHTML='';return;}el.className='vitrine '+v.tipo;el.innerHTML=v.imgs.map(u=>`<div class="vit-item"><img src="${u}" loading="lazy"></div>`).join('');}
-function resolverVendedora(){const pr=new URLSearchParams(location.search);const k=(pr.get("v")||"").toLowerCase().trim();let v=(CONFIG.vendedoras||[]).find(x=>x.chave===k)||(CONFIG.vendedoras||[])[0]||{nome:"Estação da Prata",whatsapp:""};if(pr.get("n"))v={nome:v.nome,whatsapp:pr.get("n").replace(/\D/g,"")};VENDEDORA=v;}
+let NEUTRO=false,VENDEDORA_ESCOLHIDA=false;
+function resolverVendedora(){const pr=new URLSearchParams(location.search);const k=(pr.get("v")||"").toLowerCase().trim();if(k==='publico'){NEUTRO=true;VENDEDORA={nome:'Estação da Prata',whatsapp:(CONFIG.publico&&CONFIG.publico.central)||''};return;}let v=(CONFIG.vendedoras||[]).find(x=>x.chave===k)||(CONFIG.vendedoras||[])[0]||{nome:"Estação da Prata",whatsapp:""};if(pr.get("n"))v={nome:v.nome,whatsapp:pr.get("n").replace(/\D/g,"")};VENDEDORA=v;}
 
 /* ----- zoom ----- */
 function abrirZoom(id){zoomId=id;const p=prods().find(x=>x.id==id);if(!p||!p.imgs.length)return;renderZoom();document.getElementById('lightbox').classList.add('aberto');document.body.style.overflow="hidden";}
@@ -813,8 +833,12 @@ function confirmarNumero(){fecharNumero();abrirGaveta();}
 function abrirBrindeInfo(){const b=campBrinde();document.getElementById('mbNome').textContent=b.nome||'Brinde especial';document.getElementById('mbFoto').innerHTML=b.img?`<img src="${b.img}">`:emojiCamp();document.getElementById('mbRegras').textContent=b.regras||('Faça um pedido de '+fmt(b.valorMinimo)+' ou mais e ganhe seu brinde grátis! 💎');document.getElementById('overlayBrinde').classList.add('aberto');document.getElementById('modalBrinde').classList.add('aberto');}
 function fecharBrindeInfo(){document.getElementById('overlayBrinde').classList.remove('aberto');document.getElementById('modalBrinde').classList.remove('aberto');}
 function registrarPedido(){try{const itens=Object.entries(carrinho).filter(([k])=>k!=='brinde').map(([k,e])=>{const info=itemInfo(e);return {id:e.id,numero:e.numero||'',nome:info.nome,codigo:info.codigo,qtd:e.qtd,preco:info.preco};});const payload={campanha:MODO,vendedora:VENDEDORA.nome,total:totalFinal(),subtotal:subtotalItens(),desconto_pct:descProgPct(),brinde:!!carrinho['brinde'],catalogo:querCatalogo===true?'sim':querCatalogo===false?'nao':null,itens};fetch(`${SUPA_URL}/rest/v1/pedidos`,{method:'POST',headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'application/json'},body:JSON.stringify(payload),keepalive:true}).catch(()=>{});}catch(e){}}
-function finalizar(){if(countItens()===0)return;registrarPedido();const linhas=Object.entries(carrinho).map(([k,e])=>{const info=itemInfo(e);return info.brinde?`🎁 BRINDE: ${campBrinde().nome} (grátis)`:`• ${e.qtd}x ${info.nome}${info.codigo?` [cód: ${info.codigo}]`:''} — ${fmt(info.preco)} (un)`;}).join("\n");const cat=querCatalogo===true?"SIM, quero ver o catálogo completo 📖":querCatalogo===false?"Não, por enquanto só essas peças":"Não respondeu";const _tot=descProgPct()>0?`💰 Subtotal: ${fmt(subtotalItens())}\n🎉 Desconto ${descProgPct()}%: -${fmt(descProgValor())}\n✅ Total: ${fmt(totalFinal())}`:`💰 Total: ${fmt(totalFinal())}`;const msg=`Olá, ${VENDEDORA.nome}! 💍\nVim pelo link de ofertas e quero fazer meu pedido:\n\n${linhas}\n\n${_tot}\n\n📖 Catálogo completo: ${cat}`;window.open(`https://wa.me/${VENDEDORA.whatsapp}?text=${encodeURIComponent(msg)}`,"_blank");}
+function finalizar(){if(countItens()===0)return;if(NEUTRO&&!VENDEDORA_ESCOLHIDA){abrirEscolhaVend();return;}registrarPedido();const linhas=Object.entries(carrinho).map(([k,e])=>{const info=itemInfo(e);return info.brinde?`🎁 BRINDE: ${campBrinde().nome} (grátis)`:`• ${e.qtd}x ${info.nome}${info.codigo?` [cód: ${info.codigo}]`:''} — ${fmt(info.preco)} (un)`;}).join("\n");const cat=querCatalogo===true?"SIM, quero ver o catálogo completo 📖":querCatalogo===false?"Não, por enquanto só essas peças":"Não respondeu";const _tot=descProgPct()>0?`💰 Subtotal: ${fmt(subtotalItens())}\n🎉 Desconto ${descProgPct()}%: -${fmt(descProgValor())}\n✅ Total: ${fmt(totalFinal())}`:`💰 Total: ${fmt(totalFinal())}`;const msg=`Olá, ${VENDEDORA.nome}! 💍\nVim pelo link de ofertas e quero fazer meu pedido:\n\n${linhas}\n\n${_tot}\n\n📖 Catálogo completo: ${cat}`;window.open(`https://wa.me/${VENDEDORA.whatsapp}?text=${encodeURIComponent(msg)}`,"_blank");}
 
+function abrirEscolhaVend(){const b=document.getElementById('escBody');b.innerHTML=`<h3>Quase lá! 💍</h3><p>Você já tem uma vendedora na Estação da Prata?</p><div class="esc-btns"><button class="esc-sim" onclick="escolhaTemVend(true)">Sim, já tenho 💛</button><button class="esc-nao" onclick="escolhaTemVend(false)">Não, é minha 1ª vez</button></div>`;document.getElementById('escOv').classList.add('aberto');document.getElementById('escModal').classList.add('aberto');}
+function escolhaTemVend(sim){if(!sim){VENDEDORA={nome:'Estação da Prata',whatsapp:(CONFIG.publico&&CONFIG.publico.central)||''};VENDEDORA_ESCOLHIDA=true;fecharEscolha();finalizar();return;}const vs=(CONFIG.publico&&CONFIG.publico.vendedoras)||[];const b=document.getElementById('escBody');b.innerHTML=`<h3>Escolha sua vendedora 💛</h3><p>Com quem você já é atendida?</p><div class="esc-vends">${vs.map((v,i)=>`<button onclick="escolherVend(${i})">${v.nome}</button>`).join('')}</div><button class="esc-voltar" onclick="abrirEscolhaVend()">‹ voltar</button>`;}
+function escolherVend(i){const v=((CONFIG.publico&&CONFIG.publico.vendedoras)||[])[i];if(!v)return;VENDEDORA={nome:v.nome,whatsapp:(v.whatsapp||'').replace(/\D/g,'')};VENDEDORA_ESCOLHIDA=true;fecharEscolha();finalizar();}
+function fecharEscolha(){document.getElementById('escOv').classList.remove('aberto');document.getElementById('escModal').classList.remove('aberto');}
 /* ===================== EDITOR ===================== */
 function toast(t){const e=document.getElementById('toast');e.textContent=t;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),3800);}
 function comprimir(file,max=900,q=.82){return new Promise(res=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;if(w>h&&w>max){h=h*max/w;w=max;}else if(h>=w&&h>max){w=w*max/h;h=max;}const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(img,0,0,w,h);res(c.toDataURL('image/jpeg',q));};img.onerror=()=>res("");const fr=new FileReader();fr.onload=e=>img.src=e.target.result;fr.readAsDataURL(file);});}
@@ -922,6 +946,7 @@ function campEditorHTML(i){
     <div class="campo"><label>Título do preview</label><input value="${escA(c.ogTitulo)}" oninput="working.campanhas[${i}].ogTitulo=this.value"></div>
     <div class="campo"><label>Descrição do preview</label><input value="${escA(c.ogDescricao)}" oninput="working.campanhas[${i}].ogDescricao=this.value"></div>
     <div class="linkbox">🔗 Link: <b>${c.url?c.url.replace(/\/+$/,'')+'/'+c.slug+'.html':'(preencha o endereço)'}</b>?v=duda1</div>
+    <div class="linkbox" style="margin-top:8px">🌐 Link PÚBLICO (sem vendedora): <b>${c.url?c.url.replace(/\/+$/,'')+'/'+c.slug+'.html':'(preencha o endereço)'}?v=publico</b></div>
   </div></details>`;
 }
 function voltarLista(){campSel=null;prodSel=null;renderMain();window.scrollTo(0,0);}
@@ -998,6 +1023,10 @@ function ehAnel(cat){return /an[eé]is|anel/i.test(cat||'');}
 function catsCampanha(){const c=working.campanhas[campSel];if(!Array.isArray(c.categorias))c.categorias=[];return c.categorias;}
 function adicionarCategoria(n){n=(n||'').trim();if(!n)return false;const arr=catsCampanha();if(!arr.includes(n))arr.push(n);return true;}
 function mudarCategoria(j,v){if(v==='__nova'){const n=prompt('Nome da nova categoria:');if(n&&adicionarCategoria(n)){edProds()[j].cat=n.trim();}}else{edProds()[j].cat=v;}refreshProdEditor();}
+function pubVends(){if(!working.publico)working.publico={};if(!Array.isArray(working.publico.vendedoras))working.publico.vendedoras=[];return working.publico.vendedoras;}
+function renderPubVends(){const el=document.getElementById('pubVends');if(!el)return;el.innerHTML=pubVends().map((v,i)=>`<div class="pubv-row"><input value="${escA(v.nome)}" oninput="pubVends()[${i}].nome=this.value" placeholder="Nome"><input value="${escA(v.whatsapp)}" oninput="pubVends()[${i}].whatsapp=this.value.replace(/\\D/g,'')" placeholder="5519..."><button onclick="removerPubVend(${i})">🗑</button></div>`).join('');}
+function addPubVend(){pubVends().push({nome:'',whatsapp:''});renderPubVends();}
+function removerPubVend(i){pubVends().splice(i,1);renderPubVends();}
 function renderCatList(){const el=document.getElementById('catList');if(!el)return;const cats=catsCampanha();el.innerHTML=cats.length?cats.map((c,i)=>`<span class="cat-chip">${escH(c)}<button onclick="removerCategoria(${i})">×</button></span>`).join(''):'<div style="font-size:12px;color:var(--cinza);margin-bottom:6px">Nenhuma categoria ainda.</div>';}
 function addCategoriaConfig(){const inp=document.getElementById('catNova');if(adicionarCategoria(inp.value)){inp.value='';renderCatList();renderMenuEditor();}}
 function removerCategoria(i){catsCampanha().splice(i,1);renderCatList();renderMenuEditor();}
@@ -1050,9 +1079,10 @@ async function enviarVitrine(i,inp){if(!inp.files.length)return;toast('Otimizand
 function removerVitrineImg(i,j){working.campanhas[i].vitrine.imgs.splice(j,1);renderMain();}
 
 /* ----- CONFIG ----- */
-function configHTML(){return `
-  <details class="acc" open><summary>👩 Vendedoras</summary><div class="acc-body"><div id="edVendedoras"></div></div></details>`;}
-function iniciarConfig(){const lb=document.getElementById('logoBox');if(lb){if(working.logo){lb.innerHTML=`<img src="${working.logo}" style="width:100%;height:100%;object-fit:contain">`;document.getElementById('removerLogo').style.display='inline-block';}else{lb.innerHTML=`<span class="mais">+</span><span>Enviar logo</span>`;document.getElementById('removerLogo').style.display='none';}}const fb=document.getElementById('faviconBox');if(fb)fb.innerHTML=working.favicon?`<img src="${working.favicon}" style="width:100%;height:100%;object-fit:cover">`:`<span class="mais">+</span><span>ícone</span>`;renderEdVendedoras();}
+function configHTML(){working.publico=working.publico||{central:'5519981990280',vendedoras:[{nome:'Duda',whatsapp:'5519982699000'},{nome:'Eduarda',whatsapp:'5519984303537'},{nome:'Larissa',whatsapp:'5519983619149'}]};return `
+  <details class="acc" open><summary>👩 Vendedoras</summary><div class="acc-body"><div id="edVendedoras"></div></div></details>
+  <details class="acc"><summary>🔗 Link público (sem vendedora)</summary><div class="acc-body"><div class="bsub">Para o link que você divulga pro público geral. A cliente escolhe a vendedora antes de finalizar.</div><div class="campo"><label>Número central (quem NÃO tem vendedora)</label><input value="${escA(working.publico.central||'')}" oninput="working.publico.central=this.value.replace(/\\D/g,'')" placeholder="5519981990280"></div><div class="bsub" style="margin-top:6px">Vendedoras que a cliente pode escolher:</div><div id="pubVends"></div><button class="faixa-add" onclick="addPubVend()">+ Vendedora</button><div class="dica" style="margin-top:10px">💡 O link público é o link da campanha com <b>?v=publico</b> no fim.</div></div></details>`;}
+function iniciarConfig(){const lb=document.getElementById('logoBox');if(lb){if(working.logo){lb.innerHTML=`<img src="${working.logo}" style="width:100%;height:100%;object-fit:contain">`;document.getElementById('removerLogo').style.display='inline-block';}else{lb.innerHTML=`<span class="mais">+</span><span>Enviar logo</span>`;document.getElementById('removerLogo').style.display='none';}}const fb=document.getElementById('faviconBox');if(fb)fb.innerHTML=working.favicon?`<img src="${working.favicon}" style="width:100%;height:100%;object-fit:cover">`:`<span class="mais">+</span><span>ícone</span>`;renderEdVendedoras();renderPubVends();}
 async function enviarLogo(i){if(!i.files[0])return;working.logo=await lerArquivo(i.files[0]);iniciarConfig();}
 function removerLogo(){working.logo="";iniciarConfig();}
 async function enviarFavicon(i){if(!i.files[0])return;working.favicon=await comprimir(i.files[0],128,.9);iniciarConfig();}

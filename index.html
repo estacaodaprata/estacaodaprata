@@ -120,6 +120,7 @@ table.data td.num{text-align:right;font-family:'IBM Plex Mono';font-variant-nume
 .overlay{position:fixed;inset:0;background:rgba(14,28,26,.5);backdrop-filter:blur(3px);z-index:100;display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;opacity:0;pointer-events:none;transition:.2s}
 .overlay.show{opacity:1;pointer-events:auto}
 .modal{background:var(--card);border-radius:18px;width:100%;max-width:600px;box-shadow:var(--shadow-lg);transform:translateY(14px) scale(.98);transition:.22s;overflow:hidden}
+.modal.wide{max-width:820px}
 .overlay.show .modal{transform:none}
 .modal-h{padding:20px 24px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;gap:12px}
 .modal-h h3{font-size:17px}.modal-h p{font-size:12px;color:var(--muted)}
@@ -155,6 +156,24 @@ table.data td.num{text-align:right;font-family:'IBM Plex Mono';font-variant-nume
 .chart-box{position:relative;height:250px}
 .due-badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;font-family:'IBM Plex Mono'}
 .due-ok{background:var(--green-bg);color:var(--green)}.due-soon{background:var(--amber-bg);color:var(--amber)}.due-late{background:var(--red-bg);color:var(--red)}
+.alloc-dot{display:inline-block;width:11px;height:11px;border-radius:3px;flex:none}
+.prog{height:7px;border-radius:4px;background:var(--line);overflow:hidden}
+.prog i{display:block;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--teal),var(--brass));transition:.4s}
+.prog.over i{background:var(--red)}
+.socio-row{display:grid;grid-template-columns:1fr 110px 36px;gap:8px;margin-bottom:8px;align-items:center}
+.socio-row .rm{width:34px;height:34px;border-radius:8px;background:var(--red-bg);color:var(--red);display:flex;align-items:center;justify-content:center}
+.socio-row .rm svg{width:15px;height:15px}
+.add-line{font-size:12.5px;font-weight:600;color:var(--brass-d);display:inline-flex;align-items:center;gap:5px;padding:6px 0}
+.add-line svg{width:14px;height:14px}
+.checklist{display:flex;flex-direction:column}
+.check-item{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--line-2)}
+.check-item:last-child{border-bottom:none}
+.check-box{width:24px;height:24px;border-radius:7px;border:2px solid var(--line);flex:none;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:.12s;color:#fff}
+.check-box svg{width:14px;height:14px;opacity:0}
+.check-box.on{background:var(--green);border-color:var(--green)}.check-box.on svg{opacity:1}
+.check-item .cname{font-size:13px;font-weight:500;flex:none;width:160px}
+.check-item.done .cname{color:var(--muted)}
+.check-item input.cobs{flex:1;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;background:#fff}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--ink);color:#fff;padding:12px 20px;border-radius:11px;font-size:13.5px;font-weight:500;box-shadow:var(--shadow-lg);z-index:200;opacity:0;transition:.25s;display:flex;align-items:center;gap:9px;max-width:90vw}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .toast svg{width:17px;height:17px;color:var(--brass-l);flex:none}
@@ -277,7 +296,11 @@ const ICON={
   target:'<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
   swap:'<path d="M17 1l4 4-4 4M3 11V9a4 4 0 0 1 4-4h14M7 23l-4-4 4-4M21 13v2a4 4 0 0 1-4 4H3"/>',
   alert:'<path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/>',
-  layers:'<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>'
+  layers:'<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>',
+  obras:'<path d="M2 20h20M4 20V8l6-4 6 4v12M9 20v-5h2v5"/><path d="M14 12h.01M14 16h.01"/>',
+  socios:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  fornecedores:'<path d="M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7"/><rect x="3" y="3" width="7" height="7" rx="1"/>',
+  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>'
 };
 const sicon=(n)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[n]||''}</svg>`;
 
@@ -288,9 +311,15 @@ async function dbUpdate(table,id,patch){const{error}=await SB.from(table).update
 async function dbDelete(table,id){const{error}=await SB.from(table).delete().eq('id',id);if(error)throw error;}
 async function dbView(view){const{data,error}=await SB.from(view).select('*');if(error)throw error;return data||[];}
 async function rpc(fn,args){const{data,error}=await SB.rpc(fn,args);if(error)throw error;return data;}
+async function dbWhere(table,col,v,order='created_at'){const{data,error}=await SB.from(table).select('*').eq(col,v).order(order,{ascending:true});if(error)throw error;return data||[];}
+async function dbOne(table,id){const{data,error}=await SB.from(table).select('*').eq('id',id).single();if(error)throw error;return data;}
 
 /* cache em memória (recarregado após cada mutação) */
-const S={contas:[],saldos:[],cartoes:[],faturas:[],parcelas:[],transacoes:[],contasPagar:[],contasReceber:[],categorias:[],centros:[],fluxo:[]};
+const S={contas:[],saldos:[],cartoes:[],faturas:[],parcelas:[],transacoes:[],contasPagar:[],contasReceber:[],categorias:[],centros:[],fluxo:[],socios:[],obras:[],fornecedores:[],empreendimentos:[]};
+const socioNome=(id)=>{const s=S.socios.find(x=>x.id===id);return s?s.nome:'—';};
+const socioCor=(id)=>{const s=S.socios.find(x=>x.id===id);return s?(s.cor||'#B4884D'):'#93A29D';};
+const empNome=(id)=>{const e=S.empreendimentos.find(x=>x.id===id);return e?e.nome:'—';};
+const fornNome=(id)=>{const f=S.fornecedores.find(x=>x.id===id);return f?f.nome:'—';};
 const contaNome=(id)=>{const c=S.contas.find(x=>x.id===id);return c?`${c.banco} · ${c.nome}`:'—';};
 const cartaoNome=(id)=>{const c=S.cartoes.find(x=>x.id===id);return c?c.nome:'—';};
 const catNome=(id)=>{const c=S.categorias.find(x=>x.id===id);return c?c.nome:'—';};
@@ -348,8 +377,13 @@ const NAV=[
   {id:'lancamentos',ic:'lancamentos',t:'Lançamentos',sub:'Entradas, saídas e transferências'},
   {id:'pagar',ic:'pagar',t:'Contas a pagar',sub:'Compromissos e vencimentos'},
   {id:'receber',ic:'receber',t:'Contas a receber',sub:'Recebíveis'},
+  {grp:'Obras & Negócio'},
+  {id:'obras',ic:'obras',t:'Obras',sub:'Construções, gastos e sócios'},
+  {id:'empreendimentos',ic:'layers',t:'Empreendimentos',sub:'Terrenos e projetos'},
+  {id:'socios',ic:'socios',t:'Sócios',sub:'Parceiros de obra'},
+  {id:'fornecedores',ic:'fornecedores',t:'Fornecedores',sub:'Cadastro e contatos'},
 ];
-let ROUTE='painel';
+let ROUTE='painel',detailObra=null;
 function renderNav(){
   $('#nav').innerHTML=NAV.map(n=>{
     if(n.grp)return `<div class="nav-group">${n.grp}</div>`;
@@ -357,7 +391,7 @@ function renderNav(){
   }).join('');
 }
 function toggleNav(open){$('#sidebar').classList.toggle('open',open);$('#scrim').classList.toggle('show',open);}
-function go(id){ROUTE=id;toggleNav(false);window.scrollTo(0,0);renderNav();render();}
+function go(id,arg){ROUTE=id;if(id==='obraDetail')detailObra=arg;toggleNav(false);window.scrollTo(0,0);renderNav();render();}
 
 let charts=[];
 function clearCharts(){charts.forEach(c=>{try{c.destroy();}catch(e){}});charts=[];}
@@ -367,7 +401,8 @@ function mkChart(id,cfg){const el=$('#'+id);if(!el)return;charts.push(new Chart(
 function toast(msg,err){const t=$('#toast');t.className='toast'+(err?' err':'');t.innerHTML=sicon(err?'alert':'check')+esc(msg);t.classList.add('show');clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),err?3800:2200);}
 
 async function render(){
-  const meta=NAV.find(n=>n.id===ROUTE)||{t:'',sub:''};
+  let meta=NAV.find(n=>n.id===ROUTE)||{t:'',sub:''};
+  if(ROUTE==='obraDetail')meta={t:'Obra',sub:'Gastos, sócios, etapas e documentação'};
   $('#pageTitle').textContent=meta.t;$('#pageSub').textContent=meta.sub;
   clearCharts();
   const c=$('#content');
@@ -380,6 +415,11 @@ async function render(){
     else if(ROUTE==='lancamentos')await renderLancamentos(c);
     else if(ROUTE==='pagar')await renderPagar(c);
     else if(ROUTE==='receber')await renderReceber(c);
+    else if(ROUTE==='obras')await renderObras(c);
+    else if(ROUTE==='obraDetail')await renderObraDetail(c);
+    else if(ROUTE==='empreendimentos')await renderEmpreendimentos(c);
+    else if(ROUTE==='socios')await renderSocios(c);
+    else if(ROUTE==='fornecedores')await renderFornecedores(c);
   }catch(e){
     c.innerHTML=`<div class="empty">${sicon('alert')}<h3>Não consegui carregar</h3><p>${esc(traduzErro(e.message||String(e)))}</p><button class="btn btn-ghost" onclick="render()">Tentar de novo</button></div>`;
   }
@@ -739,11 +779,342 @@ async function receberConta(id){
   });
 }
 
+/* ================= SÓCIOS ================= */
+async function renderSocios(c){
+  S.socios=await dbList('socios','nome');
+  $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formSocio()">${sicon('plus')}Novo sócio</button>`;
+  c.innerHTML=`<div class="card"><div class="tbl-wrap">${S.socios.length?`<table class="data"><thead><tr><th>Sócio</th><th>Documento</th><th>Telefone</th><th></th></tr></thead><tbody>
+    ${S.socios.map(s=>`<tr>
+      <td><div style="display:flex;align-items:center;gap:11px"><span class="avatar" style="background:${esc(s.cor||'#B4884D')}">${esc((s.nome||'?')[0])}</span><span class="row-title">${esc(s.nome)}</span></div></td>
+      <td class="row-sub">${esc(s.documento||'—')}</td><td class="row-sub">${esc(s.telefone||'—')}</td>
+      <td><div class="t-actions"><button class="icon-btn" onclick='formSocio(${JSON.stringify(s.id)})'>${sicon('edit')}</button><button class="icon-btn del" onclick='delReg("socios","${s.id}","Sócio")'>${sicon('trash')}</button></div></td></tr>`).join('')}
+  </tbody></table>`:`<div class="empty">${sicon('socios')}<h3>Nenhum sócio cadastrado</h3><p>Cadastre os parceiros com quem seu pai constrói. Depois você vincula cada um às obras com sua % de participação.</p><button class="btn btn-brass" onclick="formSocio()">${sicon('plus')}Novo sócio</button></div>`}</div></div>`;
+}
+function formSocio(id){
+  const x=id?S.socios.find(y=>y.id===id):{cor:PALETTE[S.socios.length%PALETTE.length]};
+  openModal('Sócio',`
+    <div class="field full"><label>Nome <span class="hint">*</span></label><input id="m_nome" value="${esc(x.nome||'')}"></div>
+    <div class="field"><label>Cor</label><input id="m_cor" type="color" value="${esc(x.cor||'#B4884D')}" style="height:42px;padding:4px"></div>
+    <div class="field"><label>Telefone</label><input id="m_telefone" value="${esc(x.telefone||'')}"></div>
+    <div class="field full"><label>Documento (CPF/CNPJ)</label><input id="m_documento" value="${esc(x.documento||'')}"></div>
+  `,async()=>{
+    if(!val('m_nome')){toast('Informe o nome',1);return false;}
+    const row={nome:val('m_nome'),cor:val('m_cor'),telefone:val('m_telefone'),documento:val('m_documento')};
+    if(id)await dbUpdate('socios',id,row);else await dbInsert('socios',row);
+    toast('Sócio salvo');return true;
+  });
+}
+const PALETTE=['#B4884D','#1F6F63','#3E6E9E','#B5504A','#C4922E','#7A5CA8','#2E8B62'];
+
+/* ================= FORNECEDORES ================= */
+async function renderFornecedores(c){
+  S.fornecedores=await dbList('fornecedores','nome');
+  $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formFornecedor()">${sicon('plus')}Novo fornecedor</button>`;
+  c.innerHTML=`<div class="card"><div class="tbl-wrap">${S.fornecedores.length?`<table class="data"><thead><tr><th>Fornecedor</th><th>Categoria</th><th>Telefone</th><th></th></tr></thead><tbody>
+    ${S.fornecedores.map(f=>`<tr><td class="row-title">${esc(f.nome)}</td><td class="row-sub">${esc(f.categoria||'—')}</td><td class="row-sub">${esc(f.telefone||'—')}</td>
+      <td><div class="t-actions"><button class="icon-btn" onclick='formFornecedor(${JSON.stringify(f.id)})'>${sicon('edit')}</button><button class="icon-btn del" onclick='delReg("fornecedores","${f.id}","Fornecedor")'>${sicon('trash')}</button></div></td></tr>`).join('')}
+  </tbody></table>`:`<div class="empty">${sicon('fornecedores')}<h3>Nenhum fornecedor</h3><p>Cadastre lojas de material, prestadores e parceiros. Depois você vincula às compras da obra.</p><button class="btn btn-brass" onclick="formFornecedor()">${sicon('plus')}Novo fornecedor</button></div>`}</div></div>`;
+}
+function formFornecedor(id){
+  const x=id?S.fornecedores.find(y=>y.id===id):{};
+  openModal('Fornecedor',`
+    <div class="field full"><label>Nome <span class="hint">*</span></label><input id="m_nome" value="${esc(x.nome||'')}"></div>
+    <div class="field"><label>Categoria</label><input id="m_categoria" value="${esc(x.categoria||'')}" placeholder="material, mão de obra…"></div>
+    <div class="field"><label>Telefone</label><input id="m_telefone" value="${esc(x.telefone||'')}"></div>
+    <div class="field"><label>Documento</label><input id="m_documento" value="${esc(x.documento||'')}"></div>
+    <div class="field"><label>Contato</label><input id="m_contato" value="${esc(x.contato||'')}"></div>
+    <div class="field full"><label>Observações</label><textarea id="m_observacoes">${esc(x.observacoes||'')}</textarea></div>
+  `,async()=>{
+    if(!val('m_nome')){toast('Informe o nome',1);return false;}
+    const row={nome:val('m_nome'),categoria:val('m_categoria'),telefone:val('m_telefone'),documento:val('m_documento'),contato:val('m_contato'),observacoes:val('m_observacoes')};
+    if(id)await dbUpdate('fornecedores',id,row);else await dbInsert('fornecedores',row);
+    toast('Fornecedor salvo');return true;
+  });
+}
+
+/* ================= EMPREENDIMENTOS ================= */
+async function renderEmpreendimentos(c){
+  S.empreendimentos=await dbList('empreendimentos','nome');
+  S.obras=await dbList('obras','nome');
+  $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formEmpreendimento()">${sicon('plus')}Novo empreendimento</button>`;
+  c.innerHTML=`<div class="card"><div class="tbl-wrap">${S.empreendimentos.length?`<table class="data"><thead><tr><th>Empreendimento</th><th>Endereço</th><th>Obras</th><th></th></tr></thead><tbody>
+    ${S.empreendimentos.map(e=>`<tr><td class="row-title">${esc(e.nome)}</td><td class="row-sub">${esc(e.endereco||'—')}</td>
+      <td class="row-sub">${S.obras.filter(o=>o.empreendimento_id===e.id).length} obra(s)</td>
+      <td><div class="t-actions"><button class="icon-btn" onclick='formEmpreendimento(${JSON.stringify(e.id)})'>${sicon('edit')}</button><button class="icon-btn del" onclick='delReg("empreendimentos","${e.id}","Empreendimento")'>${sicon('trash')}</button></div></td></tr>`).join('')}
+  </tbody></table>`:`<div class="empty">${sicon('layers')}<h3>Nenhum empreendimento</h3><p>Um empreendimento agrupa terreno, obra e futuras unidades. Útil quando um projeto vira várias casas/lotes. Opcional — uma obra pode existir sozinha.</p><button class="btn btn-brass" onclick="formEmpreendimento()">${sicon('plus')}Novo empreendimento</button></div>`}</div></div>`;
+}
+function formEmpreendimento(id){
+  const x=id?S.empreendimentos.find(y=>y.id===id):{};
+  openModal('Empreendimento',`
+    <div class="field full"><label>Nome <span class="hint">*</span></label><input id="m_nome" value="${esc(x.nome||'')}"></div>
+    <div class="field full"><label>Endereço</label><input id="m_endereco" value="${esc(x.endereco||'')}"></div>
+    <div class="field full"><label>Descrição</label><textarea id="m_descricao">${esc(x.descricao||'')}</textarea></div>
+  `,async()=>{
+    if(!val('m_nome')){toast('Informe o nome',1);return false;}
+    const row={nome:val('m_nome'),endereco:val('m_endereco'),descricao:val('m_descricao')};
+    if(id)await dbUpdate('empreendimentos',id,row);else await dbInsert('empreendimentos',row);
+    toast('Empreendimento salvo');return true;
+  });
+}
+
+/* ================= OBRAS (lista) ================= */
+const STATUS_OBRA=[['planejamento','Planejamento'],['em_andamento','Em andamento'],['pausada','Pausada'],['concluida','Concluída'],['entregue','Entregue']];
+const stLabel=(s)=>(STATUS_OBRA.find(x=>x[0]===s)||[s,s])[1];
+const stPill=(s)=>{const m={planejamento:'blue',em_andamento:'amber',pausada:'gray',concluida:'green',entregue:'teal'};return `<span class="pill pill-${m[s]||'gray'}">${stLabel(s)}</span>`;}
+async function renderObras(c){
+  S.obras=await dbList('obras','created_at',false);
+  S.socios=await dbList('socios','nome');
+  const custos=await dbView('v_obra_custos');
+  const cmap={};custos.forEach(x=>cmap[x.obra_id]=x);
+  $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formObra()">${sicon('plus')}Nova obra</button>`;
+  const totOrc=sum(S.obras,o=>N(o.orcamento)),totReal=sum(custos,x=>N(x.realizado)),totVGV=sum(S.obras,o=>N(o.vgv));
+  c.innerHTML=`
+    <div class="kpi-grid">
+      ${kpiCard({lbl:'Obras',val:S.obras.length,sub:S.obras.filter(o=>o.status==='em_andamento').length+' em andamento',ic:'obras',tint:'brass'})}
+      ${kpiCard({lbl:'Investido',val:kmoney(totReal),sub:'de '+kmoney(totOrc)+' orçados',ic:'wallet',tint:'teal'})}
+      ${kpiCard({lbl:'VGV total',val:kmoney(totVGV),ic:'up',tint:'green'})}
+      ${kpiCard({lbl:'Margem projetada',val:kmoney(totVGV-totOrc),sub:totOrc?((totVGV-totOrc)/totOrc*100).toFixed(0)+'% sobre custo':'',ic:'target',tint:'amber'})}
+    </div>
+    ${S.obras.length?`<div style="display:grid;gap:14px">${S.obras.map(o=>obraCardHTML(o,cmap[o.id])).join('')}</div>`
+      :`<div class="card"><div class="empty">${sicon('obras')}<h3>Nenhuma obra ainda</h3><p>Cadastre a obra do seu pai. Depois você abre e lança cada gasto (quem pagou, você ou o sócio) — tudo entra no caixa e na equalização.</p><button class="btn btn-brass" onclick="formObra()">${sicon('plus')}Nova obra</button></div></div>`}`;
+}
+function obraCardHTML(o,cu){
+  const real=N(cu?cu.realizado:0),saldo=N(o.orcamento)-real,over=real>N(o.orcamento)&&N(o.orcamento)>0;
+  const marg=N(o.vgv)-N(o.orcamento);
+  return `<div class="card"><div class="card-b" style="padding:0">
+    <div style="display:flex;align-items:flex-start;gap:15px;padding:18px 20px;border-bottom:1px solid var(--line-2)">
+      <div class="kicon tint-brass" style="width:44px;height:44px;border-radius:12px">${sicon('obras')}</div>
+      <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h3 style="font-size:16px">${esc(o.nome)}</h3>${stPill(o.status)}</div>
+        <div class="row-sub" style="margin-top:3px">${esc(o.endereco||'')}${o.empreendimento_id?' · '+esc(empNome(o.empreendimento_id)):''}</div></div>
+      <button class="btn btn-primary btn-sm" onclick="go('obraDetail','${o.id}')">Abrir</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;background:var(--line-2)">
+      ${obraStat('Orçamento',money0(o.orcamento))}${obraStat('Realizado',money0(real),over?'neg':'')}
+      ${obraStat('Saldo',money0(saldo),saldo<0?'neg':'')}${obraStat('VGV',money0(o.vgv))}
+      ${obraStat('Margem',money0(marg),marg>=0?'pos':'neg')}${obraStat('Execução',(o.progresso||0)+'%')}
+    </div>
+    <div style="padding:14px 20px"><div class="prog ${over?'over':''}"><i style="width:${Math.min(100,o.progresso||0)}%"></i></div></div>
+  </div></div>`;
+}
+function obraStat(l,v,cls=''){return `<div style="background:#fff;padding:12px 15px"><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600">${l}</div><div class="mono ${cls}" style="font-size:15px;font-weight:600;margin-top:2px">${v}</div></div>`;}
+
+let obraSociosEdit=[];
+async function formObra(id){
+  await Promise.all([
+    S.socios.length?null:dbList('socios','nome').then(d=>S.socios=d),
+    S.empreendimentos.length?null:dbList('empreendimentos','nome').then(d=>S.empreendimentos=d)
+  ]);
+  let o={status:'em_andamento',orcamento:0,vgv:0,progresso:0,socios:[]};
+  if(id){o=await dbOne('obras',id);o.socios=await dbWhere('obra_socios','obra_id',id);}
+  obraSociosEdit=(o.socios||[]).map(s=>({socio_id:s.socio_id,participacao:s.participacao}));
+  const empOpts='<option value="">— nenhum —</option>'+S.empreendimentos.map(e=>`<option value="${e.id}" ${o.empreendimento_id===e.id?'selected':''}>${esc(e.nome)}</option>`).join('');
+  openModal(id?'Editar obra':'Nova obra',`
+    <div class="field full"><label>Nome da obra <span class="hint">*</span></label><input id="m_nome" value="${esc(o.nome||'')}" placeholder="Ex.: Sobrado Jardim Aurora"></div>
+    <div class="field"><label>Empreendimento</label><select id="m_empreendimento_id">${empOpts}</select></div>
+    <div class="field"><label>Endereço</label><input id="m_endereco" value="${esc(o.endereco||'')}"></div>
+    <div class="field"><label>Orçamento previsto</label><div class="prefix"><input id="m_orcamento" type="number" step="0.01" value="${o.orcamento||0}"></div></div>
+    <div class="field"><label>VGV (valor de venda)</label><div class="prefix"><input id="m_vgv" type="number" step="0.01" value="${o.vgv||0}"></div></div>
+    <div class="field"><label>Início</label><input id="m_data_inicio" type="date" value="${(o.data_inicio||'').slice(0,10)}"></div>
+    <div class="field"><label>Previsão de entrega</label><input id="m_data_prevista" type="date" value="${(o.data_prevista||'').slice(0,10)}"></div>
+    <div class="field"><label>Execução (%)</label><input id="m_progresso" type="number" min="0" max="100" value="${o.progresso||0}"></div>
+    <div class="field"><label>Situação</label><select id="m_status">${STATUS_OBRA.map(([v,l])=>`<option value="${v}" ${o.status===v?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="field full"><label>Sócios e participação <span class="hint">(deixe vazio se a obra é só do seu pai)</span></label>
+      <div id="socRows">${obraSociosEdit.map(socRowHTML).join('')}</div>
+      <button class="add-line" onclick="addSocRow()">${sicon('plus')}Adicionar sócio</button></div>
+  `,async()=>{
+    if(!val('m_nome')){toast('Informe o nome da obra',1);return false;}
+    const row={nome:val('m_nome'),empreendimento_id:val('m_empreendimento_id')||null,endereco:val('m_endereco'),
+      orcamento:N(val('m_orcamento')),vgv:N(val('m_vgv')),data_inicio:val('m_data_inicio')||null,data_prevista:val('m_data_prevista')||null,
+      progresso:N(val('m_progresso')),status:val('m_status')};
+    let obraId=id;
+    if(id)await dbUpdate('obras',id,row);else{const nw=await dbInsert('obras',row);obraId=nw.id;}
+    // sincroniza sócios: apaga os atuais e recria (simples e robusto)
+    const rows=$$('#socRows .socio-row').map(r=>({socio_id:$('.s-id',r).value,participacao:N($('.s-part',r).value)})).filter(s=>s.socio_id&&s.participacao);
+    const atuais=await dbWhere('obra_socios','obra_id',obraId);
+    for(const a of atuais)await dbDelete('obra_socios',a.id);
+    for(const s of rows)await dbInsert('obra_socios',{obra_id:obraId,socio_id:s.socio_id,participacao:s.participacao});
+    toast('Obra salva');return true;
+  },'','wide');
+}
+function socRowHTML(sp){sp=sp||{socio_id:'',participacao:''};
+  const opts=S.socios.map(s=>`<option value="${s.id}" ${sp.socio_id===s.id?'selected':''}>${esc(s.nome)}</option>`).join('');
+  return `<div class="socio-row"><select class="s-id">${opts||'<option value="">cadastre sócios</option>'}</select>
+    <div class="prefix"><input class="s-part" type="number" placeholder="%" value="${sp.participacao||''}" style="text-align:right;padding-left:12px"></div>
+    <button class="rm" onclick="this.closest('.socio-row').remove()">${sicon('x')}</button></div>`;}
+function addSocRow(){if(!S.socios.length){toast('Cadastre sócios primeiro (menu Sócios)',1);return;}$('#socRows').insertAdjacentHTML('beforeend',socRowHTML());}
+
+/* ================= OBRA — DETALHE ================= */
+const DEFAULT_DOCS=['Matrícula','Projeto aprovado','Alvará de construção','ITBI','Habite-se','Averbação','CND / INSS obra'];
+async function renderObraDetail(c){
+  const o=await dbOne('obras',detailObra).catch(()=>null);
+  if(!o){go('obras');return;}
+  if(!S.socios.length)S.socios=await dbList('socios','nome');
+  if(!S.categorias.length)S.categorias=await dbList('categorias','nome');
+  if(!S.contas.length)await reloadContas();
+  if(!S.cartoes.length)S.cartoes=await dbList('cartoes');
+  const [gastos,osoc,etapas,soc] = await Promise.all([
+    dbWhere('compras','obra_id',o.id,'data'),
+    dbView('v_obra_custos'),
+    dbWhere('etapas_obra','obra_id',o.id,'ordem'),
+    dbWhere('v_socios_obra','obra_id',o.id).catch(()=>[])
+  ]);
+  const cu=osoc.find(x=>x.obra_id===o.id)||{realizado:0};
+  const real=N(cu.realizado),saldo=N(o.orcamento)-real,over=real>N(o.orcamento)&&N(o.orcamento)>0;
+  const marg=N(o.vgv)-N(o.orcamento),roi=N(o.orcamento)?marg/N(o.orcamento)*100:0;
+  // receitas da obra (transações entrada vinculadas)
+  const rec=await dbWhere('transacoes','obra_id',o.id).catch(()=>[]);
+  const recTot=sum(rec.filter(t=>t.tipo==='entrada'&&t.situacao==='pago'),t=>N(t.valor));
+  const docs=o.docs||{};
+  // sócios equalização
+  let equal='';
+  if(soc.length===2){const d=N(soc[0].pago)-N(soc[0].devido);
+    if(Math.abs(d)<1)equal='<span class="pill pill-green">Aportes equilibrados</span>';
+    else if(d>0)equal=`<b>${esc((soc[1].nome||'').split(' ')[0])}</b> deve repassar <b class="mono">${money(Math.abs(d))}</b> a <b>${esc((soc[0].nome||'').split(' ')[0])}</b>`;
+    else equal=`<b>${esc((soc[0].nome||'').split(' ')[0])}</b> deve repassar <b class="mono">${money(Math.abs(d))}</b> a <b>${esc((soc[1].nome||'').split(' ')[0])}</b>`;}
+
+  c.innerHTML=`
+    <button class="btn btn-ghost btn-sm" onclick="go('obras')" style="margin-bottom:14px">‹ Voltar para obras</button>
+    <div style="display:flex;align-items:flex-start;gap:15px;margin-bottom:16px;flex-wrap:wrap">
+      <div class="kicon tint-brass" style="width:48px;height:48px;border-radius:13px">${sicon('obras')}</div>
+      <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h2 style="font-size:21px">${esc(o.nome)}</h2>${stPill(o.status)}</div>
+        <div class="row-sub">${esc(o.endereco||'')}${o.empreendimento_id?' · '+esc(empNome(o.empreendimento_id)):''} · ${fmtDate(o.data_inicio)} → ${fmtDate(o.data_prevista)}</div></div>
+      <button class="btn btn-ghost btn-sm" onclick="formObra('${o.id}')">${sicon('edit')}Editar</button>
+      <button class="icon-btn del" onclick='delObraDetail("${o.id}")'>${sicon('trash')}</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(115px,1fr));gap:1px;background:var(--line-2);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:18px">
+      ${obraStat('Orçamento',money0(o.orcamento))}${obraStat('Realizado',money0(real),over?'neg':'')}${obraStat('Saldo',money0(saldo),saldo<0?'neg':'')}
+      ${obraStat('Execução',(o.progresso||0)+'%')}${obraStat('VGV',money0(o.vgv))}${obraStat('Margem',money0(marg),marg>=0?'pos':'neg')}${obraStat('ROI',roi.toFixed(1)+'%',roi>=0?'pos':'neg')}
+    </div>
+    <div class="grid-2">
+      <div class="card"><div class="card-h"><h3>Gastos da obra</h3><span class="sub">${gastos.length} lançamento(s)</span><div class="actions"><button class="btn btn-brass btn-sm" onclick="formGastoObra('${o.id}')">${sicon('plus')}Adicionar gasto</button></div></div>
+        <div class="tbl-wrap">${gastos.length?`<table class="data"><thead><tr><th>Data</th><th>Descrição</th><th>Quem pagou</th><th>Forma</th><th class="num">Valor</th><th></th></tr></thead><tbody>
+          ${gastos.slice().reverse().map(g=>`<tr><td class="mono" style="font-size:12.5px">${fmtDate(g.data)}</td>
+            <td><div class="row-title">${esc(g.descricao||'—')}</div><div class="row-sub">${esc(catNome(g.categoria_id))}${g.etapa_id?' · '+esc((etapas.find(e=>e.id===g.etapa_id)||{}).nome||''):''}</div></td>
+            <td>${g.socio_id?`<span style="display:inline-flex;align-items:center;gap:6px"><span class="alloc-dot" style="width:9px;height:9px;border-radius:3px;background:${socioCor(g.socio_id)}"></span>${esc((socioNome(g.socio_id)||'').split(' ')[0])}</span>`:'<span class="row-sub">—</span>'}</td>
+            <td class="row-sub">${g.forma==='cartao'?'<span class="pill pill-amber">cartão</span>':esc(g.forma||'—')}</td>
+            <td class="num"><b>${money(g.valor)}</b></td>
+            <td><div class="t-actions"><button class="icon-btn del" onclick='delGastoObra("${g.id}","${o.id}")'>${sicon('trash')}</button></div></td></tr>`).join('')}
+        </tbody></table>`:`<div class="empty" style="padding:36px">${sicon('lancamentos')}<h3 style="font-size:15px">Nenhum gasto lançado</h3><p>Registre cada gasto e quem pagou. À vista já sai do caixa; no cartão vira parcela na fatura.</p><button class="btn btn-brass" onclick="formGastoObra('${o.id}')">${sicon('plus')}Primeiro gasto</button></div>`}</div>
+      </div>
+      <div class="card"><div class="card-h"><h3>Sócios &amp; equalização</h3></div>
+        <div class="card-b">${soc.length?soc.map(s=>{const dif=N(s.pago)-N(s.devido);return `
+          <div style="margin-bottom:13px"><div style="display:flex;align-items:center;gap:9px;margin-bottom:6px"><span class="avatar" style="background:${socioCor(s.socio_id)}">${esc((s.nome||'?')[0])}</span><span style="flex:1;font-weight:600;font-size:13.5px">${esc(s.nome)}</span><span class="pill pill-gray mono">${N(s.participacao)}%</span></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px;font-size:11.5px">
+            <div style="background:var(--surface);padding:8px 10px;border-radius:8px"><div style="color:var(--muted)">Pagou</div><div class="mono" style="font-weight:600">${money0(s.pago)}</div></div>
+            <div style="background:var(--surface);padding:8px 10px;border-radius:8px"><div style="color:var(--muted)">Deveria</div><div class="mono" style="font-weight:600">${money0(s.devido)}</div></div>
+            <div style="background:${dif>=0?'var(--green-bg)':'var(--red-bg)'};padding:8px 10px;border-radius:8px"><div style="color:var(--muted)">Dif.</div><div class="mono ${dif>=0?'pos':'neg'}" style="font-weight:600">${dif>=0?'+':''}${money0(dif)}</div></div>
+          </div></div>`;}).join('')+`<div style="padding:12px 14px;background:var(--bg);color:#D6E0DD;border-radius:12px;margin-top:6px"><div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--brass-l);font-weight:700;margin-bottom:5px">Acerto</div><div style="font-size:13px">${equal||'—'}</div></div>`
+          :`<div class="empty" style="padding:22px">${sicon('socios')}<h3 style="font-size:14px">Obra individual</h3><p style="margin-bottom:12px">Sem sócios. Adicione em "Editar".</p></div>`}</div>
+      </div>
+    </div>
+    <div class="grid-2b">
+      <div class="card"><div class="card-h"><h3>Etapas</h3><span class="sub">orçado × realizado</span><div class="actions"><button class="btn btn-ghost btn-sm" onclick="formEtapa('${o.id}')">${sicon('plus')}Etapa</button></div></div>
+        <div class="tbl-wrap">${etapas.length?`<table class="data"><thead><tr><th>Etapa</th><th class="num">Orçado</th><th class="num">Gasto</th><th class="num">Saldo</th><th></th></tr></thead><tbody>
+          ${etapas.map(e=>{const g=sum(gastos.filter(x=>x.etapa_id===e.id),x=>N(x.valor));const sd=N(e.orcamento)-g;return `<tr>
+            <td class="row-title">${esc(e.nome)}</td><td class="num">${money0(e.orcamento)}</td><td class="num ${g>N(e.orcamento)&&N(e.orcamento)>0?'neg':''}">${money0(g)}</td><td class="num">${money0(sd)}</td>
+            <td><div class="t-actions"><button class="icon-btn" onclick='formEtapa("${o.id}","${e.id}")'>${sicon('edit')}</button><button class="icon-btn del" onclick='delRegObra("etapas_obra","${e.id}","Etapa","${o.id}")'>${sicon('trash')}</button></div></td></tr>`;}).join('')}
+        </tbody></table>`:`<div class="empty" style="padding:26px">${sicon('layers')}<h3 style="font-size:14px">Sem etapas</h3><p style="margin-bottom:12px">Divida a obra (fundação, estrutura, acabamento…) para acompanhar o orçamento de cada uma.</p><button class="btn btn-ghost btn-sm" onclick="formEtapa('${o.id}')">${sicon('plus')}Adicionar etapa</button></div>`}</div>
+      </div>
+      <div class="card"><div class="card-h"><h3>Documentação</h3><div class="actions"><span class="pill pill-${docPct(docs)===100?'green':'amber'}">${docPct(docs)}%</span></div></div>
+        <div class="card-b"><div class="checklist">
+          ${DEFAULT_DOCS.map(nm=>{const d=docs[nm]||{ok:false,obs:''};return `<div class="check-item ${d.ok?'done':''}">
+            <div class="check-box ${d.ok?'on':''}" onclick='toggleDocObra("${o.id}","${esc(nm)}")'>${sicon('check')}</div>
+            <span class="cname">${esc(nm)}</span>
+            <input class="cobs" placeholder="nº / obs" value="${esc(d.obs||'')}" onchange='setDocObs("${o.id}","${esc(nm)}",this.value)'></div>`;}).join('')}
+        </div></div>
+      </div>
+    </div>
+    <div class="card"><div class="card-h"><h3>DRE da obra</h3><span class="sub">resultado realizado e projetado</span></div>
+      <div class="card-b">
+        <div class="flowrow"><span class="fl">Receita realizada <small>(entradas lançadas nesta obra)</small></span><span class="fv pos">${money0(recTot)}</span></div>
+        <div class="flowrow"><span class="fl">Custo realizado <small>(gastos)</small></span><span class="fv neg">− ${money0(real)}</span></div>
+        <div class="flowrow" style="border-top:2px solid var(--ink);font-weight:700"><span class="fl" style="font-weight:700">Resultado até agora</span><span class="fv ${recTot-real>=0?'pos':'neg'}">${money0(recTot-real)}</span></div>
+        <div style="height:10px"></div>
+        <div class="flowrow"><span class="fl">VGV projetado</span><span class="fv">${money0(o.vgv)}</span></div>
+        <div class="flowrow"><span class="fl">Custo total previsto</span><span class="fv neg">− ${money0(o.orcamento)}</span></div>
+        <div class="flowrow" style="border-top:2px solid var(--ink);font-weight:700"><span class="fl" style="font-weight:700">Lucro projetado</span><span class="fv ${marg>=0?'pos':'neg'}">${money0(marg)} <small style="color:var(--muted);font-weight:400">(${roi.toFixed(1)}%)</small></span></div>
+      </div></div>`;
+}
+function docPct(docs){const ok=DEFAULT_DOCS.filter(n=>docs[n]&&docs[n].ok).length;return Math.round(ok/DEFAULT_DOCS.length*100);}
+async function toggleDocObra(oid,nm){const o=await dbOne('obras',oid);const docs=o.docs||{};docs[nm]=docs[nm]||{ok:false,obs:''};docs[nm].ok=!docs[nm].ok;await dbUpdate('obras',oid,{docs});render();}
+async function setDocObs(oid,nm,v){const o=await dbOne('obras',oid);const docs=o.docs||{};docs[nm]=docs[nm]||{ok:false,obs:''};docs[nm].obs=v;await dbUpdate('obras',oid,{docs});toast('Salvo');}
+async function delObraDetail(id){if(!confirm('Excluir esta obra e seus vínculos? Os gastos já lançados no caixa permanecem.'))return;await dbDelete('obras',id);toast('Obra excluída');go('obras');}
+async function delRegObra(table,id,label,oid){if(!confirm(`Excluir ${label.toLowerCase()}?`))return;await dbDelete(table,id);toast(label+' excluído');render();}
+async function delGastoObra(id,oid){if(!confirm('Excluir este gasto? Se foi à vista, o lançamento no caixa também será removido.'))return;
+  // remove a transação vinculada (à vista), se houver
+  const{data:txs}=await SB.from('transacoes').select('id').eq('origem_tipo','compra').eq('origem_id',id);
+  if(txs)for(const t of txs)await dbDelete('transacoes',t.id);
+  await dbDelete('compras',id);toast('Gasto excluído');render();}
+
+function formEtapa(oid,id){
+  let x={ordem:0,orcamento:0};
+  const go2=async()=>{
+    if(id){x=await dbOne('etapas_obra',id);}
+    openModal('Etapa da obra',`
+      <div class="field full"><label>Nome <span class="hint">*</span></label><input id="m_nome" value="${esc(x.nome||'')}" placeholder="Ex.: Fundação"></div>
+      <div class="field"><label>Orçamento da etapa</label><div class="prefix"><input id="m_orcamento" type="number" step="0.01" value="${x.orcamento||0}"></div></div>
+      <div class="field"><label>Ordem</label><input id="m_ordem" type="number" value="${x.ordem||0}"></div>
+    `,async()=>{
+      if(!val('m_nome')){toast('Informe o nome',1);return false;}
+      const row={obra_id:oid,nome:val('m_nome'),orcamento:N(val('m_orcamento')),ordem:N(val('m_ordem'))};
+      if(id)await dbUpdate('etapas_obra',id,row);else await dbInsert('etapas_obra',row);
+      toast('Etapa salva');return true;
+    });
+  };
+  go2();
+}
+
+async function formGastoObra(oid){
+  if(!S.categorias.length)S.categorias=await dbList('categorias','nome');
+  if(!S.socios.length)S.socios=await dbList('socios','nome');
+  if(!S.contas.length)await reloadContas();
+  if(!S.cartoes.length)S.cartoes=await dbList('cartoes');
+  const etapas=await dbWhere('etapas_obra','obra_id',oid,'ordem');
+  const cats=S.categorias.filter(c=>c.tipo==='saida');
+  const socOpts='<option value="">— não é de sócio —</option>'+S.socios.map(s=>`<option value="${s.id}">${esc(s.nome)}</option>`).join('');
+  const etOpts='<option value="">— sem etapa —</option>'+etapas.map(e=>`<option value="${e.id}">${esc(e.nome)}</option>`).join('');
+  const contaOpts=S.contas.map(c=>`<option value="${c.id}">${esc(c.banco+' · '+c.nome)}</option>`).join('');
+  const cartOpts=S.cartoes.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join('');
+  openModal('Gasto da obra',`
+    <div class="field full"><label>O que foi? <span class="hint">*</span></label><input id="m_descricao" placeholder="Ex.: Porcelanato e revestimentos"></div>
+    <div class="field"><label>Valor</label><div class="prefix"><input id="m_valor" type="number" step="0.01"></div></div>
+    <div class="field"><label>Quem pagou</label><select id="m_socio_id">${socOpts}</select></div>
+    <div class="field"><label>Categoria</label><select id="m_categoria_id"><option value="">—</option>${cats.map(c=>`<option value="${c.id}">${esc(c.nome)}</option>`).join('')}</select></div>
+    <div class="field"><label>Etapa</label><select id="m_etapa_id">${etOpts}</select></div>
+    <div class="field"><label>Data</label><input id="m_data" type="date" value="${today()}"></div>
+    <div class="field full"><label>Como foi pago?</label><select id="m_forma" onchange="gastoFormaChange()">${['pix','dinheiro','debito','transferencia','boleto','cartao'].map(f=>`<option value="${f}">${f==='cartao'?'Cartão (vai pra fatura)':f+' (à vista — sai do caixa)'}</option>`).join('')}</select></div>
+    <div class="field full ${''}" id="wrap_conta"><label>Sai de qual conta?</label><select id="m_conta_id">${contaOpts||'<option value="">cadastre uma conta</option>'}</select></div>
+    <div class="field full hide" id="wrap_cartao"><label>Qual cartão?</label><select id="m_cartao_id">${cartOpts||'<option value="">cadastre um cartão</option>'}</select><label style="margin-top:8px">Parcelas</label><input id="m_parcelas_qtd" type="number" min="1" value="1"></div>
+  `,async()=>{
+    const v=N(val('m_valor'));if(!val('m_descricao')||!v){toast('Descrição e valor são obrigatórios',1);return false;}
+    const forma=val('m_forma');
+    const compra={descricao:val('m_descricao'),valor:v,data:val('m_data'),forma,obra_id:oid,
+      categoria_id:val('m_categoria_id')||null,etapa_id:val('m_etapa_id')||null,socio_id:val('m_socio_id')||null};
+    if(forma==='cartao'){
+      const cartao=val('m_cartao_id');if(!cartao){toast('Escolha o cartão',1);return false;}
+      compra.cartao_id=cartao;compra.parcelas_qtd=N(val('m_parcelas_qtd'))||1;
+      await dbInsert('compras',compra);
+      toast('Gasto lançado — parcelas na fatura');
+    }else{
+      const conta=val('m_conta_id');if(!conta){toast('Escolha a conta',1);return false;}
+      const cp=await dbInsert('compras',{...compra,conta_id:conta,parcelas_qtd:1});
+      // à vista: gera a saída no caixa, vinculada à compra (origem_tipo='compra')
+      await dbInsert('transacoes',{tipo:'saida',valor:v,data:val('m_data'),descricao:val('m_descricao'),
+        conta_id:conta,categoria_id:compra.categoria_id,obra_id:oid,socio_id:compra.socio_id,forma,situacao:'pago',
+        origem_tipo:'compra',origem_id:cp.id});
+      toast('Gasto lançado e debitado do caixa');
+    }
+    return true;
+  },'','wide');
+}
+function gastoFormaChange(){const cartao=val('m_forma')==='cartao';$('#wrap_cartao').classList.toggle('hide',!cartao);$('#wrap_conta').classList.toggle('hide',cartao);}
+
 /* ================= MODAL genérico ================= */
 let modalSave=null;
 function val(id){const e=$('#'+id);return e?e.value.trim():'';}
-function openModal(titulo,bodyHTML,onSave,hint){
+function openModal(titulo,bodyHTML,onSave,hint,size){
   modalSave=onSave;
+  $('#modal').className='modal'+(size==='wide'?' wide':'');
   $('#modal').innerHTML=`
     <div class="modal-h"><h3>${esc(titulo)}</h3>${hint?`<p>${esc(hint)}</p>`:''}<button class="close" onclick="closeModal()">${sicon('x')}</button></div>
     <div class="modal-b"><div class="form-grid">${bodyHTML}</div></div>

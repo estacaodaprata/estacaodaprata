@@ -300,7 +300,14 @@ const ICON={
   obras:'<path d="M2 20h20M4 20V8l6-4 6 4v12M9 20v-5h2v5"/><path d="M14 12h.01M14 16h.01"/>',
   socios:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
   fornecedores:'<path d="M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7"/><rect x="3" y="3" width="7" height="7" rx="1"/>',
-  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>'
+  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/>',
+  imoveis:'<path d="M3 11l9-7 9 7M5 10v10h14V10M9 20v-6h6v6"/>',
+  proprietarios:'<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z"/>',
+  leads:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  visitas:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  propostas:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>',
+  comissoes:'<circle cx="12" cy="12" r="10"/><path d="M12 6v12M15 9a3 3 0 0 0-3-2.5c-1.7 0-3 1-3 2.5s1.3 2 3 2.5 3 1 3 2.5-1.3 2.5-3 2.5a3 3 0 0 1-3-2.5"/>',
+  home:'<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>'
 };
 const sicon=(n)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[n]||''}</svg>`;
 
@@ -315,7 +322,10 @@ async function dbWhere(table,col,v,order='created_at'){const{data,error}=await S
 async function dbOne(table,id){const{data,error}=await SB.from(table).select('*').eq('id',id).single();if(error)throw error;return data;}
 
 /* cache em memória (recarregado após cada mutação) */
-const S={contas:[],saldos:[],cartoes:[],faturas:[],parcelas:[],transacoes:[],contasPagar:[],contasReceber:[],categorias:[],centros:[],fluxo:[],socios:[],obras:[],fornecedores:[],empreendimentos:[]};
+const S={contas:[],saldos:[],cartoes:[],faturas:[],parcelas:[],transacoes:[],contasPagar:[],contasReceber:[],categorias:[],centros:[],fluxo:[],socios:[],obras:[],fornecedores:[],empreendimentos:[],imoveis:[],proprietarios:[],leads:[],visitas:[],propostas:[],comissoes:[]};
+const imovelNome=(id)=>{const i=S.imoveis.find(x=>x.id===id);return i?(i.titulo||i.codigo||'imóvel'):'—';};
+const propNome=(id)=>{const p=S.proprietarios.find(x=>x.id===id);return p?p.nome:'—';};
+const leadNome=(id)=>{const l=S.leads.find(x=>x.id===id);return l?l.nome:'—';};
 const socioNome=(id)=>{const s=S.socios.find(x=>x.id===id);return s?s.nome:'—';};
 const socioCor=(id)=>{const s=S.socios.find(x=>x.id===id);return s?(s.cor||'#B4884D'):'#93A29D';};
 const empNome=(id)=>{const e=S.empreendimentos.find(x=>x.id===id);return e?e.nome:'—';};
@@ -382,6 +392,13 @@ const NAV=[
   {id:'empreendimentos',ic:'layers',t:'Empreendimentos',sub:'Terrenos e projetos'},
   {id:'socios',ic:'socios',t:'Sócios',sub:'Parceiros de obra'},
   {id:'fornecedores',ic:'fornecedores',t:'Fornecedores',sub:'Cadastro e contatos'},
+  {grp:'Imobiliário'},
+  {id:'imoveis',ic:'imoveis',t:'Imóveis',sub:'Portfólio próprio e de terceiros'},
+  {id:'proprietarios',ic:'proprietarios',t:'Proprietários',sub:'Donos dos imóveis'},
+  {id:'leads',ic:'leads',t:'Leads / Funil',sub:'Clientes interessados'},
+  {id:'visitas',ic:'visitas',t:'Visitas',sub:'Agenda de visitas'},
+  {id:'propostas',ic:'propostas',t:'Propostas',sub:'Ofertas e negociação'},
+  {id:'comissoes',ic:'comissoes',t:'Comissões',sub:'Corretagem a receber'},
 ];
 let ROUTE='painel',detailObra=null;
 function renderNav(){
@@ -420,6 +437,12 @@ async function render(){
     else if(ROUTE==='empreendimentos')await renderEmpreendimentos(c);
     else if(ROUTE==='socios')await renderSocios(c);
     else if(ROUTE==='fornecedores')await renderFornecedores(c);
+    else if(ROUTE==='imoveis')await renderImoveis(c);
+    else if(ROUTE==='proprietarios')await renderProprietarios(c);
+    else if(ROUTE==='leads')await renderLeads(c);
+    else if(ROUTE==='visitas')await renderVisitas(c);
+    else if(ROUTE==='propostas')await renderPropostas(c);
+    else if(ROUTE==='comissoes')await renderComissoes(c);
   }catch(e){
     c.innerHTML=`<div class="empty">${sicon('alert')}<h3>Não consegui carregar</h3><p>${esc(traduzErro(e.message||String(e)))}</p><button class="btn btn-ghost" onclick="render()">Tentar de novo</button></div>`;
   }
@@ -1108,6 +1131,318 @@ async function formGastoObra(oid){
   },'','wide');
 }
 function gastoFormaChange(){const cartao=val('m_forma')==='cartao';$('#wrap_cartao').classList.toggle('hide',!cartao);$('#wrap_conta').classList.toggle('hide',cartao);}
+
+/* ================= IMOBILIÁRIO — constantes ================= */
+const FINALIDADE=[['venda','Venda'],['aluguel','Aluguel'],['ambos','Ambos']];
+const DONO=[['terceiro','De terceiro (corretagem)'],['proprio','Próprio'],['proprio_construcao','Próprio em construção'],['proprio_venda','Próprio à venda']];
+const STATUS_IMOVEL=[['disponivel','Disponível'],['reservado','Reservado'],['em_negociacao','Em negociação'],['proposta','Proposta'],['vendido','Vendido'],['alugado','Alugado'],['suspenso','Suspenso'],['indisponivel','Indisponível']];
+const FUNIL=[['novo','Novo'],['contato','Contato'],['visita','Visita'],['proposta','Proposta'],['negociacao','Negociação'],['fechado','Fechado'],['perdido','Perdido']];
+const lbl=(arr,v)=>(arr.find(x=>x[0]===v)||[v,v])[1];
+const donoTag=(d)=>d&&d.startsWith('proprio')?'<span class="pill pill-brass">próprio</span>':'<span class="pill pill-gray">terceiro</span>';
+const stImovelPill=(s)=>{const m={disponivel:'green',reservado:'blue',em_negociacao:'amber',proposta:'amber',vendido:'gray',alugado:'teal',suspenso:'gray',indisponivel:'gray'};return `<span class="pill pill-${m[s]||'gray'}">${lbl(STATUS_IMOVEL,s)}</span>`;};
+
+/* ================= IMÓVEIS ================= */
+let imSeg='todos';
+async function renderImoveis(c){
+  S.imoveis=await dbList('imoveis','created_at',false);
+  S.proprietarios=await dbList('proprietarios','nome');
+  $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formImovel()">${sicon('plus')}Novo imóvel</button>`;
+  const ativos=S.imoveis.filter(i=>!['vendido','alugado','indisponivel'].includes(i.status));
+  const proprios=S.imoveis.filter(i=>(i.dono||'').startsWith('proprio'));
+  const vendidos=S.imoveis.filter(i=>i.status==='vendido');
+  const rows=S.imoveis.filter(i=>imSeg==='todos'||(imSeg==='proprios'&&(i.dono||'').startsWith('proprio'))||(imSeg==='terceiros'&&i.dono==='terceiro')||(imSeg==='ativos'&&!['vendido','alugado'].includes(i.status)));
+  c.innerHTML=`
+    <div class="kpi-grid">
+      ${kpiCard({lbl:'Ativos',val:ativos.length,sub:'disponíveis/em negociação',ic:'imoveis',tint:'brass'})}
+      ${kpiCard({lbl:'Próprios',val:proprios.length,sub:kmoney(sum(proprios,i=>N(i.valor_venda)))+' em VGV',ic:'home',tint:'teal'})}
+      ${kpiCard({lbl:'Vendidos',val:vendidos.length,ic:'check',tint:'green'})}
+      ${kpiCard({lbl:'De terceiros',val:S.imoveis.filter(i=>i.dono==='terceiro').length,sub:'para corretagem',ic:'proprietarios',tint:'blue'})}
+    </div>
+    <div class="toolbar"><div class="seg">
+      ${[['todos','Todos'],['ativos','Ativos'],['proprios','Próprios'],['terceiros','Terceiros']].map(([k,l])=>`<button class="${imSeg===k?'active':''}" onclick="imSeg='${k}';render()">${l}</button>`).join('')}
+    </div><button class="btn btn-brass btn-sm" style="margin-left:auto" onclick="formImovel()">${sicon('plus')}Novo</button></div>
+    <div class="card"><div class="tbl-wrap">${rows.length?`<table class="data"><thead><tr><th>Imóvel</th><th>Dono</th><th>Finalidade</th><th class="num">Valor</th><th>Situação</th><th></th></tr></thead><tbody>
+      ${rows.map(i=>`<tr>
+        <td><div class="row-title">${esc(i.titulo||i.codigo||'—')}</div><div class="row-sub">${esc(i.tipo||'')}${i.cidade?' · '+esc(i.cidade):''}${i.proprietario_id?' · '+esc(propNome(i.proprietario_id)):''}</div></td>
+        <td>${donoTag(i.dono)}</td>
+        <td class="row-sub">${lbl(FINALIDADE,i.finalidade)}</td>
+        <td class="num">${i.finalidade==='aluguel'?money0(i.valor_aluguel)+'/mês':money0(i.valor_venda)}</td>
+        <td>${stImovelPill(i.status)}</td>
+        <td><div class="t-actions"><button class="icon-btn" onclick='formImovel(${JSON.stringify(i.id)})'>${sicon('edit')}</button><button class="icon-btn del" onclick='delReg("imoveis","${i.id}","Imóvel")'>${sicon('trash')}</button></div></td></tr>`).join('')}
+    </tbody></table>`:`<div class="empty">${sicon('imoveis')}<h3>Nenhum imóvel</h3><p>Cadastre imóveis próprios (do seu pai) e de terceiros (para corretagem). O sistema diferencia os dois.</p><button class="btn btn-brass" onclick="formImovel()">${sicon('plus')}Novo imóvel</button></div>`}</div></div>`;
+}
+async function formImovel(id){
+  if(!S.proprietarios.length)S.proprietarios=await dbList('proprietarios','nome');
+  if(!S.obras.length)S.obras=await dbList('obras','nome');
+  const x=id?await dbOne('imoveis',id):{finalidade:'venda',dono:'terceiro',status:'disponivel'};
+  const propOpts='<option value="">— nenhum —</option>'+S.proprietarios.map(p=>`<option value="${p.id}" ${x.proprietario_id===p.id?'selected':''}>${esc(p.nome)}</option>`).join('');
+  const obraOpts='<option value="">— nenhuma —</option>'+S.obras.map(o=>`<option value="${o.id}" ${x.obra_id===o.id?'selected':''}>${esc(o.nome)}</option>`).join('');
+  openModal(id?'Editar imóvel':'Novo imóvel',`
+    <div class="field full"><label>Título <span class="hint">*</span></label><input id="m_titulo" value="${esc(x.titulo||'')}" placeholder="Ex.: Sobrado 3 dorm. Jd. Aurora"></div>
+    <div class="field"><label>Tipo</label><select id="m_tipo">${['Casa','Sobrado','Apartamento','Terreno','Sala comercial','Galpão','Chácara'].map(t=>`<option ${x.tipo===t?'selected':''}>${t}</option>`).join('')}</select></div>
+    <div class="field"><label>Código interno</label><input id="m_codigo" value="${esc(x.codigo||'')}"></div>
+    <div class="field"><label>Dono</label><select id="m_dono">${DONO.map(([v,l])=>`<option value="${v}" ${x.dono===v?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="field"><label>Finalidade</label><select id="m_finalidade">${FINALIDADE.map(([v,l])=>`<option value="${v}" ${x.finalidade===v?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="field"><label>Situação</label><select id="m_status">${STATUS_IMOVEL.map(([v,l])=>`<option value="${v}" ${x.status===v?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="field"><label>Proprietário</label><select id="m_proprietario_id">${propOpts}</select></div>
+    <div class="field"><label>Obra vinculada</label><select id="m_obra_id">${obraOpts}</select></div>
+    <div class="field full"><label>Endereço</label><input id="m_endereco" value="${esc(x.endereco||'')}"></div>
+    <div class="field"><label>Bairro</label><input id="m_bairro" value="${esc(x.bairro||'')}"></div>
+    <div class="field"><label>Cidade</label><input id="m_cidade" value="${esc(x.cidade||'')}"></div>
+    <div class="field"><label>Área terreno (m²)</label><input id="m_area_terreno" type="number" step="any" value="${x.area_terreno||''}"></div>
+    <div class="field"><label>Área construída (m²)</label><input id="m_area_construida" type="number" step="any" value="${x.area_construida||''}"></div>
+    <div class="field"><label>Quartos</label><input id="m_quartos" type="number" value="${x.quartos||''}"></div>
+    <div class="field"><label>Suítes</label><input id="m_suites" type="number" value="${x.suites||''}"></div>
+    <div class="field"><label>Banheiros</label><input id="m_banheiros" type="number" value="${x.banheiros||''}"></div>
+    <div class="field"><label>Vagas</label><input id="m_vagas" type="number" value="${x.vagas||''}"></div>
+    <div class="field"><label>Valor de venda</label><div class="prefix"><input id="m_valor_venda" type="number" step="0.01" value="${x.valor_venda||''}"></div></div>
+    <div class="field"><label>Valor de aluguel</label><div class="prefix"><input id="m_valor_aluguel" type="number" step="0.01" value="${x.valor_aluguel||''}"></div></div>
+    <div class="field"><label>% Comissão</label><input id="m_comissao_pct" type="number" step="0.01" value="${x.comissao_pct||''}"></div>
+    <div class="field"><label>Custo total <span class="hint">(se próprio)</span></label><div class="prefix"><input id="m_custo_total" type="number" step="0.01" value="${x.custo_total||''}"></div></div>
+    <div class="field full"><label>Descrição</label><textarea id="m_descricao">${esc(x.descricao||'')}</textarea></div>
+  `,async()=>{
+    if(!val('m_titulo')){toast('Informe o título',1);return false;}
+    const g=k=>val('m_'+k),n=k=>val('m_'+k)?N(val('m_'+k)):null;
+    const row={titulo:g('titulo'),tipo:g('tipo'),codigo:g('codigo'),dono:g('dono'),finalidade:g('finalidade'),status:g('status'),
+      proprietario_id:g('proprietario_id')||null,obra_id:g('obra_id')||null,endereco:g('endereco'),bairro:g('bairro'),cidade:g('cidade'),
+      area_terreno:n('area_terreno'),area_construida:n('area_construida'),quartos:n('quartos'),suites:n('suites'),banheiros:n('banheiros'),vagas:n('vagas'),
+      valor_venda:n('valor_venda'),valor_aluguel:n('valor_aluguel'),comissao_pct:n('comissao_pct'),custo_total:n('custo_total'),descricao:g('descricao')};
+    if(id)await dbUpdate('imoveis',id,row);else await dbInsert('imoveis',row);
+    toast('Imóvel salvo');return true;
+  },'','wide');
+}
+
+/* ================= PROPRIETÁRIOS ================= */
+async function renderProprietarios(c){
+  S.proprietarios=await dbList('proprietarios','nome');S.imoveis=await dbList('imoveis','titulo');
+  $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formProprietario()">${sicon('plus')}Novo proprietário</button>`;
+  c.innerHTML=`<div class="card"><div class="tbl-wrap">${S.proprietarios.length?`<table class="data"><thead><tr><th>Proprietário</th><th>Telefone</th><th>Imóveis</th><th></th></tr></thead><tbody>
+    ${S.proprietarios.map(p=>`<tr><td class="row-title">${esc(p.nome)}</td><td class="row-sub">${esc(p.telefone||'—')}</td>
+      <td class="row-sub">${S.imoveis.filter(i=>i.proprietario_id===p.id).length} imóvel(is)</td>
+      <td><div class="t-actions"><button class="icon-btn" onclick='formProprietario(${JSON.stringify(p.id)})'>${sicon('edit')}</button><button class="icon-btn del" onclick='delReg("proprietarios","${p.id}","Proprietário")'>${sicon('trash')}</button></div></td></tr>`).join('')}
+  </tbody></table>`:`<div class="empty">${sicon('proprietarios')}<h3>Nenhum proprietário</h3><p>Cadastre os donos dos imóveis que seu pai capta para vender. Um proprietário pode ter vários imóveis.</p><button class="btn btn-brass" onclick="formProprietario()">${sicon('plus')}Novo proprietário</button></div>`}</div></div>`;
+}
+function formProprietario(id){
+  const x=id?S.proprietarios.find(y=>y.id===id):{};
+  openModal('Proprietário',`
+    <div class="field full"><label>Nome <span class="hint">*</span></label><input id="m_nome" value="${esc(x.nome||'')}"></div>
+    <div class="field"><label>Telefone / WhatsApp</label><input id="m_telefone" value="${esc(x.telefone||'')}"></div>
+    <div class="field"><label>E-mail</label><input id="m_email" value="${esc(x.email||'')}"></div>
+    <div class="field"><label>Documento</label><input id="m_documento" value="${esc(x.documento||'')}"></div>
+    <div class="field full"><label>Endereço</label><input id="m_endereco" value="${esc(x.endereco||'')}"></div>
+    <div class="field full"><label>Observações</label><textarea id="m_observacoes">${esc(x.observacoes||'')}</textarea></div>
+  `,async()=>{
+    if(!val('m_nome')){toast('Informe o nome',1);return false;}
+    const row={nome:val('m_nome'),telefone:val('m_telefone'),email:val('m_email'),documento:val('m_documento'),endereco:val('m_endereco'),observacoes:val('m_observacoes')};
+    if(id)await dbUpdate('proprietarios',id,row);else await dbInsert('proprietarios',row);
+    toast('Proprietário salvo');return true;
+  });
+}
+
+/* ================= LEADS / FUNIL ================= */
+let leadView='funil';
+async function renderLeads(c){
+  S.leads=await dbList('leads','created_at',false);
+  S.imoveis=await dbList('imoveis','titulo');
+  $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formLead()">${sicon('plus')}Novo lead</button>`;
+  const ativos=S.leads.filter(l=>!['fechado','perdido'].includes(l.etapa));
+  const potencial=sum(ativos,l=>N(l.preco_max)||N(l.preco_min));
+  const kpis=`<div class="kpi-grid">
+    ${kpiCard({lbl:'Leads ativos',val:ativos.length,ic:'leads',tint:'brass'})}
+    ${kpiCard({lbl:'Em proposta/negociação',val:S.leads.filter(l=>['proposta','negociacao'].includes(l.etapa)).length,ic:'target',tint:'amber'})}
+    ${kpiCard({lbl:'Potencial no funil',val:kmoney(potencial),ic:'wallet',tint:'teal'})}
+    ${kpiCard({lbl:'Fechados',val:S.leads.filter(l=>l.etapa==='fechado').length,ic:'check',tint:'green'})}
+  </div>`;
+  const toolbar=`<div class="toolbar"><div class="seg">
+      <button class="${leadView==='funil'?'active':''}" onclick="leadView='funil';render()">Funil</button>
+      <button class="${leadView==='lista'?'active':''}" onclick="leadView='lista';render()">Lista</button>
+    </div><button class="btn btn-brass btn-sm" style="margin-left:auto" onclick="formLead()">${sicon('plus')}Novo lead</button></div>`;
+  if(!S.leads.length){c.innerHTML=kpis+emptyCard('leads','Nenhum lead ainda','Cadastre os clientes interessados. Arraste pelo funil (Contato → Visita → Proposta → Fechado) e veja imóveis que combinam com cada um.',`<button class="btn btn-brass" onclick="formLead()">${sicon('plus')}Novo lead</button>`);return;}
+  if(leadView==='funil'){
+    c.innerHTML=kpis+toolbar+`<div style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px">${FUNIL.map(([et,elab])=>{
+      const list=S.leads.filter(l=>l.etapa===et);
+      return `<div style="flex:0 0 220px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)">
+        <div style="padding:12px 14px;border-bottom:1px solid var(--line-2);display:flex;align-items:center;justify-content:space-between"><b style="font-size:12.5px">${elab}</b><span class="pill pill-gray">${list.length}</span></div>
+        <div style="padding:8px;min-height:60px">${list.map(l=>`<div onclick='formLead(${JSON.stringify(l.id)})' style="background:var(--surface);border-radius:9px;padding:10px 11px;margin-bottom:7px;cursor:pointer">
+          <div class="row-title" style="font-size:13px">${esc(l.nome)}</div>
+          <div class="row-sub">${esc(l.tipo_busca||l.finalidade||'')}${(l.preco_max||l.preco_min)?' · '+kmoney(l.preco_max||l.preco_min):''}</div>
+          <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap">${FUNIL.filter(f=>f[0]!==et).slice(0,0).map(()=>'').join('')}<button class="btn btn-ghost btn-sm" style="padding:3px 8px;font-size:11px" onclick='event.stopPropagation();moverLead("${l.id}")'>mover ›</button></div>
+        </div>`).join('')||'<div class="row-sub" style="text-align:center;padding:10px">—</div>'}</div>
+      </div>`;}).join('')}</div>`;
+  }else{
+    c.innerHTML=kpis+toolbar+`<div class="card"><div class="tbl-wrap"><table class="data"><thead><tr><th>Lead</th><th>Busca</th><th class="num">Faixa</th><th>Etapa</th><th></th></tr></thead><tbody>
+      ${S.leads.map(l=>`<tr><td><div class="row-title">${esc(l.nome)}</div><div class="row-sub">${esc(l.telefone||'')}${l.origem?' · '+esc(l.origem):''}</div></td>
+        <td class="row-sub">${esc(l.tipo_busca||'')} ${l.quartos_min?('· '+l.quartos_min+'q'):''}</td>
+        <td class="num">${l.preco_min||l.preco_max?money0(l.preco_min)+'–'+money0(l.preco_max):'—'}</td>
+        <td><span class="pill pill-${l.etapa==='fechado'?'green':l.etapa==='perdido'?'red':'amber'}">${lbl(FUNIL,l.etapa)}</span></td>
+        <td><div class="t-actions"><button class="icon-btn" onclick='matchImoveis("${l.id}")' title="Imóveis compatíveis">${sicon('imoveis')}</button><button class="icon-btn" onclick='formLead(${JSON.stringify(l.id)})'>${sicon('edit')}</button><button class="icon-btn del" onclick='delReg("leads","${l.id}","Lead")'>${sicon('trash')}</button></div></td></tr>`).join('')}
+    </tbody></table></div></div>`;
+  }
+}
+function moverLead(id){
+  const l=S.leads.find(x=>x.id===id);const idx=FUNIL.findIndex(f=>f[0]===l.etapa);
+  openModal('Mover lead',`<div class="field full"><label>Etapa</label><select id="m_etapa">${FUNIL.map(([v,lb])=>`<option value="${v}" ${l.etapa===v?'selected':''}>${lb}</option>`).join('')}</select></div>`,
+    async()=>{await dbUpdate('leads',id,{etapa:val('m_etapa')});toast('Lead movido');return true;});
+}
+function formLead(id){
+  const x=id?S.leads.find(y=>y.id===id):{etapa:'novo',finalidade:'venda'};
+  openModal(id?'Editar lead':'Novo lead',`
+    <div class="field full"><label>Nome <span class="hint">*</span></label><input id="m_nome" value="${esc(x.nome||'')}"></div>
+    <div class="field"><label>Telefone / WhatsApp</label><input id="m_telefone" value="${esc(x.telefone||'')}"></div>
+    <div class="field"><label>E-mail</label><input id="m_email" value="${esc(x.email||'')}"></div>
+    <div class="field"><label>Origem</label><select id="m_origem">${['','Instagram','WhatsApp','Indicação','Portal imobiliário','Facebook','Google','Placa','Networking','Outro corretor'].map(o=>`<option ${x.origem===o?'selected':''}>${o}</option>`).join('')}</select></div>
+    <div class="field"><label>Etapa</label><select id="m_etapa">${FUNIL.map(([v,l])=>`<option value="${v}" ${x.etapa===v?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="field"><label>Finalidade</label><select id="m_finalidade">${FINALIDADE.map(([v,l])=>`<option value="${v}" ${x.finalidade===v?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="field full"><label>O que procura</label><input id="m_tipo_busca" value="${esc(x.tipo_busca||'')}" placeholder="Ex.: casa 3 quartos com quintal"></div>
+    <div class="field"><label>Preço mín.</label><div class="prefix"><input id="m_preco_min" type="number" step="0.01" value="${x.preco_min||''}"></div></div>
+    <div class="field"><label>Preço máx.</label><div class="prefix"><input id="m_preco_max" type="number" step="0.01" value="${x.preco_max||''}"></div></div>
+    <div class="field"><label>Quartos mín.</label><input id="m_quartos_min" type="number" value="${x.quartos_min||''}"></div>
+    <div class="field"><label>Vagas mín.</label><input id="m_vagas_min" type="number" value="${x.vagas_min||''}"></div>
+    <div class="field full"><label>Bairros de interesse</label><input id="m_bairros" value="${esc(x.bairros||'')}"></div>
+    <div class="field full"><label>Observações</label><textarea id="m_observacoes">${esc(x.observacoes||'')}</textarea></div>
+  `,async()=>{
+    if(!val('m_nome')){toast('Informe o nome',1);return false;}
+    const g=k=>val('m_'+k),n=k=>val('m_'+k)?N(val('m_'+k)):null;
+    const row={nome:g('nome'),telefone:g('telefone'),email:g('email'),origem:g('origem'),etapa:g('etapa'),finalidade:g('finalidade'),
+      tipo_busca:g('tipo_busca'),preco_min:n('preco_min'),preco_max:n('preco_max'),quartos_min:n('quartos_min'),vagas_min:n('vagas_min'),bairros:g('bairros'),observacoes:g('observacoes')};
+    if(id)await dbUpdate('leads',id,row);else await dbInsert('leads',row);
+    toast('Lead salvo');return true;
+  },id?'':'','wide');
+}
+async function matchImoveis(leadId){
+  const l=S.leads.find(x=>x.id===leadId);if(!S.imoveis.length)S.imoveis=await dbList('imoveis','titulo');
+  const preco=(i)=>l.finalidade==='aluguel'?N(i.valor_aluguel):N(i.valor_venda);
+  const compat=S.imoveis.filter(i=>{
+    if(['vendido','alugado','indisponivel'].includes(i.status))return false;
+    if(l.finalidade&&l.finalidade!=='ambos'&&i.finalidade!=='ambos'&&i.finalidade!==l.finalidade)return false;
+    const p=preco(i);
+    if(N(l.preco_min)&&p&&p<N(l.preco_min))return false;
+    if(N(l.preco_max)&&p&&p>N(l.preco_max))return false;
+    if(N(l.quartos_min)&&N(i.quartos)&&N(i.quartos)<N(l.quartos_min))return false;
+    if(N(l.vagas_min)&&N(i.vagas)&&N(i.vagas)<N(l.vagas_min))return false;
+    return true;
+  });
+  openModal(`Imóveis para ${l.nome}`,compat.length?`<div class="field full" style="grid-column:1/-1">${compat.map(i=>`<div style="display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line-2)">
+      <div class="kicon tint-brass" style="width:38px;height:38px;border-radius:10px">${sicon('imoveis')}</div>
+      <div style="flex:1"><div class="row-title">${esc(i.titulo)}</div><div class="row-sub">${esc(i.tipo||'')}${i.cidade?' · '+esc(i.cidade):''} · ${N(i.quartos)||'?'}q ${N(i.vagas)||0}vg</div></div>
+      <div class="mono" style="font-weight:600">${money0(preco(i))}</div></div>`).join('')}</div>`
+    :`<div class="field full" style="grid-column:1/-1"><div class="empty" style="padding:20px">${sicon('imoveis')}<p style="margin:0">Nenhum imóvel cadastrado bate com os critérios deste lead. Quanto mais imóveis e dados cadastrados, melhor o match.</p></div></div>`,
+    null);
+  $('#modalSaveBtn').classList.add('hide');
+}
+
+/* ================= VISITAS ================= */
+async function renderVisitas(c){
+  S.visitas=await dbList('visitas','data_hora',false);S.leads=await dbList('leads','nome');S.imoveis=await dbList('imoveis','titulo');
+  $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formVisita()">${sicon('plus')}Nova visita</button>`;
+  const prox=S.visitas.filter(v=>v.data_hora&&new Date(v.data_hora)>=new Date()&&v.status!=='cancelada');
+  c.innerHTML=`<div class="kpi-grid">
+      ${kpiCard({lbl:'Próximas visitas',val:prox.length,ic:'visitas',tint:'brass'})}
+      ${kpiCard({lbl:'Realizadas',val:S.visitas.filter(v=>v.status==='realizada').length,ic:'check',tint:'green'})}
+    </div>
+    <div class="card"><div class="tbl-wrap">${S.visitas.length?`<table class="data"><thead><tr><th>Data</th><th>Cliente</th><th>Imóvel</th><th>Status</th><th></th></tr></thead><tbody>
+      ${S.visitas.map(v=>`<tr><td class="mono" style="font-size:12.5px">${v.data_hora?fmtDate(v.data_hora)+' '+(''+v.data_hora).slice(11,16):'—'}</td>
+        <td class="row-title">${esc(leadNome(v.lead_id))}</td><td class="row-sub">${esc(imovelNome(v.imovel_id))}</td>
+        <td><span class="pill pill-${v.status==='realizada'?'green':v.status==='cancelada'?'red':'amber'}">${esc(v.status)}</span></td>
+        <td><div class="t-actions"><button class="icon-btn" onclick='formVisita(${JSON.stringify(v.id)})'>${sicon('edit')}</button><button class="icon-btn del" onclick='delReg("visitas","${v.id}","Visita")'>${sicon('trash')}</button></div></td></tr>`).join('')}
+    </tbody></table>`:`<div class="empty">${sicon('visitas')}<h3>Nenhuma visita agendada</h3><p>Agende visitas ligando o cliente ao imóvel. Fica tudo no histórico.</p><button class="btn btn-brass" onclick="formVisita()">${sicon('plus')}Nova visita</button></div>`}</div></div>`;
+}
+async function formVisita(id){
+  if(!S.leads.length)S.leads=await dbList('leads','nome');if(!S.imoveis.length)S.imoveis=await dbList('imoveis','titulo');
+  const x=id?S.visitas.find(y=>y.id===id):{status:'agendada'};
+  openModal('Visita',`
+    <div class="field"><label>Cliente</label><select id="m_lead_id"><option value="">—</option>${S.leads.map(l=>`<option value="${l.id}" ${x.lead_id===l.id?'selected':''}>${esc(l.nome)}</option>`).join('')}</select></div>
+    <div class="field"><label>Imóvel</label><select id="m_imovel_id"><option value="">—</option>${S.imoveis.map(i=>`<option value="${i.id}" ${x.imovel_id===i.id?'selected':''}>${esc(i.titulo)}</option>`).join('')}</select></div>
+    <div class="field"><label>Data e hora</label><input id="m_data_hora" type="datetime-local" value="${x.data_hora?(''+x.data_hora).slice(0,16):''}"></div>
+    <div class="field"><label>Status</label><select id="m_status">${['agendada','confirmada','realizada','cancelada','reagendada'].map(s=>`<option ${x.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+    <div class="field full"><label>Observações</label><textarea id="m_observacoes">${esc(x.observacoes||'')}</textarea></div>
+  `,async()=>{
+    const row={lead_id:val('m_lead_id')||null,imovel_id:val('m_imovel_id')||null,data_hora:val('m_data_hora')||null,status:val('m_status'),observacoes:val('m_observacoes')};
+    if(id)await dbUpdate('visitas',id,row);else await dbInsert('visitas',row);
+    toast('Visita salva');return true;
+  });
+}
+
+/* ================= PROPOSTAS ================= */
+async function renderPropostas(c){
+  S.propostas=await dbList('propostas','created_at',false);S.leads=await dbList('leads','nome');S.imoveis=await dbList('imoveis','titulo');
+  $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formProposta()">${sicon('plus')}Nova proposta</button>`;
+  const emAnalise=S.propostas.filter(p=>['enviada','em_analise','rascunho'].includes(p.status));
+  c.innerHTML=`<div class="kpi-grid">
+      ${kpiCard({lbl:'Em andamento',val:emAnalise.length,ic:'propostas',tint:'amber'})}
+      ${kpiCard({lbl:'Aceitas',val:S.propostas.filter(p=>p.status==='aceita').length,ic:'check',tint:'green'})}
+      ${kpiCard({lbl:'Valor ofertado (ativas)',val:kmoney(sum(emAnalise,p=>N(p.valor_ofertado))),ic:'wallet',tint:'teal'})}
+    </div>
+    <div class="card"><div class="tbl-wrap">${S.propostas.length?`<table class="data"><thead><tr><th>Cliente</th><th>Imóvel</th><th class="num">Anunciado</th><th class="num">Ofertado</th><th>Status</th><th></th></tr></thead><tbody>
+      ${S.propostas.map(p=>`<tr><td class="row-title">${esc(leadNome(p.lead_id))}</td><td class="row-sub">${esc(imovelNome(p.imovel_id))}</td>
+        <td class="num">${money0(p.valor_anunciado)}</td><td class="num"><b>${money0(p.valor_ofertado)}</b></td>
+        <td><span class="pill pill-${p.status==='aceita'?'green':['recusada','expirada','cancelada'].includes(p.status)?'red':'amber'}">${esc(p.status)}</span></td>
+        <td><div class="t-actions"><button class="icon-btn" onclick='formProposta(${JSON.stringify(p.id)})'>${sicon('edit')}</button><button class="icon-btn del" onclick='delReg("propostas","${p.id}","Proposta")'>${sicon('trash')}</button></div></td></tr>`).join('')}
+    </tbody></table>`:`<div class="empty">${sicon('propostas')}<h3>Nenhuma proposta</h3><p>Registre ofertas e o histórico de negociação (contraproposta vai e volta) por imóvel.</p><button class="btn btn-brass" onclick="formProposta()">${sicon('plus')}Nova proposta</button></div>`}</div></div>`;
+}
+async function formProposta(id){
+  if(!S.leads.length)S.leads=await dbList('leads','nome');if(!S.imoveis.length)S.imoveis=await dbList('imoveis','titulo');
+  const x=id?S.propostas.find(y=>y.id===id):{status:'rascunho'};
+  openModal('Proposta',`
+    <div class="field"><label>Cliente</label><select id="m_lead_id"><option value="">—</option>${S.leads.map(l=>`<option value="${l.id}" ${x.lead_id===l.id?'selected':''}>${esc(l.nome)}</option>`).join('')}</select></div>
+    <div class="field"><label>Imóvel</label><select id="m_imovel_id"><option value="">—</option>${S.imoveis.map(i=>`<option value="${i.id}" ${x.imovel_id===i.id?'selected':''}>${esc(i.titulo)}</option>`).join('')}</select></div>
+    <div class="field"><label>Valor anunciado</label><div class="prefix"><input id="m_valor_anunciado" type="number" step="0.01" value="${x.valor_anunciado||''}"></div></div>
+    <div class="field"><label>Valor ofertado</label><div class="prefix"><input id="m_valor_ofertado" type="number" step="0.01" value="${x.valor_ofertado||''}"></div></div>
+    <div class="field"><label>Entrada</label><div class="prefix"><input id="m_entrada" type="number" step="0.01" value="${x.entrada||''}"></div></div>
+    <div class="field"><label>Validade</label><input id="m_validade" type="date" value="${(x.validade||'').slice(0,10)}"></div>
+    <div class="field"><label>Status</label><select id="m_status">${['rascunho','enviada','em_analise','aceita','recusada','expirada','cancelada'].map(s=>`<option ${x.status===s?'selected':''}>${s}</option>`).join('')}</select></div>
+    <div class="field full"><label>Condições</label><textarea id="m_condicoes">${esc(x.condicoes||'')}</textarea></div>
+  `,async()=>{
+    const g=k=>val('m_'+k),n=k=>val('m_'+k)?N(val('m_'+k)):null;
+    const row={lead_id:g('lead_id')||null,imovel_id:g('imovel_id')||null,valor_anunciado:n('valor_anunciado'),valor_ofertado:n('valor_ofertado'),entrada:n('entrada'),validade:g('validade')||null,status:g('status'),condicoes:g('condicoes')};
+    if(id)await dbUpdate('propostas',id,row);else await dbInsert('propostas',row);
+    toast('Proposta salva');return true;
+  },'','wide');
+}
+
+/* ================= COMISSÕES ================= */
+const comVal=(c)=>N(c.valor_venda)*N(c.percentual)/100*(N(c.divisao_pct||100)/100);
+async function renderComissoes(c){
+  S.comissoes=await dbList('comissoes','created_at',false);S.imoveis=await dbList('imoveis','titulo');
+  $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formComissao()">${sicon('plus')}Nova comissão</button>`;
+  const aReceber=S.comissoes.filter(x=>!x.recebida);
+  c.innerHTML=`<div class="kpi-grid">
+      ${kpiCard({lbl:'Comissão a receber',val:kmoney(sum(aReceber,comVal)),sub:aReceber.length+' negócio(s)',ic:'clock',tint:'amber'})}
+      ${kpiCard({lbl:'Recebida',val:kmoney(sum(S.comissoes.filter(x=>x.recebida),comVal)),ic:'check',tint:'green'})}
+      ${kpiCard({lbl:'Total gerado',val:kmoney(sum(S.comissoes,comVal)),ic:'comissoes',tint:'brass'})}
+    </div>
+    <div class="card"><div class="tbl-wrap">${S.comissoes.length?`<table class="data"><thead><tr><th>Negócio</th><th class="num">Venda</th><th class="num">%</th><th class="num">Comissão</th><th>Status</th><th></th></tr></thead><tbody>
+      ${S.comissoes.map(x=>`<tr><td><div class="row-title">${esc(x.descricao||imovelNome(x.imovel_id))}</div>${x.divisao_pct&&N(x.divisao_pct)<100?`<div class="row-sub">divisão: ${N(x.divisao_pct)}% p/ você</div>`:''}</td>
+        <td class="num">${money0(x.valor_venda)}</td><td class="num">${N(x.percentual)}%</td><td class="num"><b>${money(comVal(x))}</b></td>
+        <td>${x.recebida?'<span class="pill pill-green">recebida</span>':`<button class="btn btn-ghost btn-sm" onclick="lancarComissao('${x.id}')">Lançar a receber</button>`}</td>
+        <td><div class="t-actions"><button class="icon-btn" onclick='formComissao(${JSON.stringify(x.id)})'>${sicon('edit')}</button><button class="icon-btn del" onclick='delReg("comissoes","${x.id}","Comissão")'>${sicon('trash')}</button></div></td></tr>`).join('')}
+    </tbody></table>`:`<div class="empty">${sicon('comissoes')}<h3>Nenhuma comissão</h3><p>Registre as vendas intermediadas. O sistema calcula sua parte e joga em "Contas a receber" — quando cair, entra no caixa.</p><button class="btn btn-brass" onclick="formComissao()">${sicon('plus')}Nova comissão</button></div>`}</div></div>`;
+}
+async function formComissao(id){
+  if(!S.imoveis.length)S.imoveis=await dbList('imoveis','titulo');
+  const x=id?S.comissoes.find(y=>y.id===id):{percentual:6,divisao_pct:100};
+  openModal('Comissão',`
+    <div class="field full"><label>Descrição do negócio</label><input id="m_descricao" value="${esc(x.descricao||'')}" placeholder="Ex.: Venda Casa Vila Nova"></div>
+    <div class="field"><label>Imóvel</label><select id="m_imovel_id"><option value="">—</option>${S.imoveis.map(i=>`<option value="${i.id}" ${x.imovel_id===i.id?'selected':''}>${esc(i.titulo)}</option>`).join('')}</select></div>
+    <div class="field"><label>Valor da venda</label><div class="prefix"><input id="m_valor_venda" type="number" step="0.01" value="${x.valor_venda||''}"></div></div>
+    <div class="field"><label>% Comissão</label><input id="m_percentual" type="number" step="0.01" value="${x.percentual||''}"></div>
+    <div class="field"><label>Sua parte (%) <span class="hint">se dividir</span></label><input id="m_divisao_pct" type="number" step="0.01" value="${x.divisao_pct||100}"></div>
+    <div class="field"><label>Previsão de recebimento</label><input id="m_previsao_receb" type="date" value="${(x.previsao_receb||'').slice(0,10)}"></div>
+  `,async()=>{
+    const g=k=>val('m_'+k),n=k=>val('m_'+k)?N(val('m_'+k)):null;
+    const row={descricao:g('descricao'),imovel_id:g('imovel_id')||null,valor_venda:n('valor_venda'),percentual:n('percentual'),divisao_pct:n('divisao_pct'),previsao_receb:g('previsao_receb')||null};
+    if(id)await dbUpdate('comissoes',id,row);else await dbInsert('comissoes',row);
+    toast('Comissão salva');return true;
+  });
+}
+async function lancarComissao(id){
+  const x=S.comissoes.find(y=>y.id===id);if(!x)return;
+  const valor=comVal(x);
+  const cr=await dbInsert('contas_receber',{descricao:'Comissão · '+(x.descricao||imovelNome(x.imovel_id)),origem:'comissão',valor,
+    vencimento:x.previsao_receb||today(),imovel_id:x.imovel_id||null,status:'a_receber'});
+  await dbUpdate('comissoes',id,{recebida:true,conta_receber_id:cr.id});
+  toast('Comissão lançada em Contas a receber');render();
+}
 
 /* ================= MODAL genérico ================= */
 let modalSave=null;

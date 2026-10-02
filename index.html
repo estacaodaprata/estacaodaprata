@@ -408,24 +408,26 @@ async function showApp(session){
   await ensurePerfil(session);
   await loadEmpresas();
   try{CTX=localStorage.getItem('cv_ctx')||'';}catch(e){CTX='';}
-  if(CTX&&!S.empresas.find(e=>e.id===CTX))CTX='';
+  if(CTX&&CTX!==OBRAS_CTX&&!S.empresas.find(e=>e.id===CTX))CTX='';
   renderCtxBar();renderNav();go('painel');
 }
 
-/* ---------- CONTEXTO (Pessoal / empresas no topo) ---------- */
-let CTX=''; // '' = Geral (consolidado); senão = empresa_id
+/* ---------- CONTEXTO (abas no topo: Geral · Pessoal · CR · EP · Corretagem · Obras) ---------- */
+let CTX=''; // '' = Geral (consolidado); OBRAS_CTX = área Obras; senão = empresa_id
+const OBRAS_CTX='__obras__';
 function ctxEmpresa(){return S.empresas.find(e=>e.id===CTX)||null;}
-function ctxTipo(){const e=ctxEmpresa();return e?(e.tipo||'empresa'):'geral';}
-function ctxDefault(){return CTX||null;} // empresa padrão p/ novos lançamentos
+function ctxTipo(){if(CTX===OBRAS_CTX)return 'obra';const e=ctxEmpresa();return e?(e.tipo||'empresa'):'geral';}
+function moneyFilter(){return (CTX&&CTX!==OBRAS_CTX)?CTX:'';} // empresa p/ filtrar dinheiro (Geral e Obras não filtram)
+function ctxDefault(){return moneyFilter()||null;} // empresa padrão p/ novos lançamentos
+function rotaVisivel(id){const n=NAV.find(x=>x.id===id);if(!n)return true;return grupoVisivel(GROUPS.find(g=>g.key===n.g));}
 function setCtx(id){CTX=id||'';try{localStorage.setItem('cv_ctx',CTX);}catch(e){}
-  // se saiu da corretagem e estava numa tela imobiliária, volta ao painel
-  const imobRotas=['imoveis','proprietarios','leads','visitas','propostas','comissoes'];
-  if(ctxTipo()!=='corretagem'&&CTX!==''&&imobRotas.includes(ROUTE))ROUTE='painel';
+  if(ROUTE!=='obraDetail'&&!rotaVisivel(ROUTE))ROUTE='painel';
   renderCtxBar();renderNav();render();}
 function renderCtxBar(){
   const bar=$('#ctxbar');if(!bar)return;
   const tabs=[`<div class="ctx-tab ${CTX===''?'active':''}" onclick="setCtx('')">${sicon('layers')}<span>Geral</span></div>`]
     .concat(S.empresas.map(e=>`<div class="ctx-tab ${CTX===e.id?'active':''}" onclick="setCtx('${e.id}')"><span class="cdot" style="background:${esc(e.cor||'#B08A45')}"></span><span>${esc(e.sufixo||e.nome)}</span></div>`))
+    .concat([`<div class="ctx-tab ${CTX===OBRAS_CTX?'active':''}" onclick="setCtx('${OBRAS_CTX}')">${sicon('obras')}<span>Obras</span></div>`])
     .concat([`<div class="ctx-tab add" onclick="gerenciarEmpresas()">${sicon('plus')}<span>Empresa</span></div>`]);
   bar.innerHTML=tabs.join('');
 }
@@ -449,45 +451,54 @@ function podeEditar(){return !S.readonly;}
 function ehAdmin(){return S.papel==='admin';}
 
 /* ================= NAV / ROUTER ================= */
+// grupos do menu e em quais contextos aparecem. '*' = sempre (Financeiro e Sistema).
+const GROUPS=[
+  {key:'financeiro',label:'Financeiro',tipos:'*'},
+  {key:'pessoal',label:'Pessoal',tipos:['pessoal']},
+  {key:'negocio',label:'Negócio',tipos:['empresa']},
+  {key:'obras',label:'Obras & Negócio',tipos:['obra']},
+  {key:'imob',label:'Imobiliário',tipos:['corretagem']},
+  {key:'sistema',label:'Sistema',tipos:'*'},
+];
 const NAV=[
-  {grp:'Financeiro'},
-  {id:'painel',ic:'painel',t:'Painel',sub:'Visão financeira'},
-  {id:'contas',ic:'contas',t:'Contas',sub:'Bancos e saldos'},
-  {id:'cartoes',ic:'cartoes',t:'Cartões',sub:'Compras, faturas e parcelas'},
-  {id:'lancamentos',ic:'lancamentos',t:'Lançamentos',sub:'Entradas, saídas e transferências'},
-  {id:'extrato',ic:'extrato',t:'Extrato',sub:'Livro-caixa com saldo acumulado'},
-  {id:'orcamento',ic:'orcamento',t:'Orçamento',sub:'Limite por categoria e quanto ainda pode gastar'},
-  {id:'pagar',ic:'pagar',t:'Contas a pagar',sub:'Compromissos e vencimentos'},
-  {id:'receber',ic:'receber',t:'Contas a receber',sub:'Recebíveis'},
-  {grp:'Obras & Negócio'},
-  {id:'obras',ic:'obras',t:'Obras',sub:'Construções, gastos e sócios'},
-  {id:'empreendimentos',ic:'layers',t:'Empreendimentos',sub:'Terrenos e projetos'},
-  {id:'socios',ic:'socios',t:'Sócios',sub:'Parceiros de obra'},
-  {id:'fornecedores',ic:'fornecedores',t:'Fornecedores',sub:'Cadastro e contatos'},
-  {grp:'Imobiliário (Corretagem)',imob:1},
-  {id:'imoveis',ic:'imoveis',t:'Imóveis',sub:'Portfólio próprio e de terceiros',imob:1},
-  {id:'proprietarios',ic:'proprietarios',t:'Proprietários',sub:'Donos dos imóveis',imob:1},
-  {id:'leads',ic:'leads',t:'Leads / Funil',sub:'Clientes interessados',imob:1},
-  {id:'visitas',ic:'visitas',t:'Visitas',sub:'Agenda de visitas',imob:1},
-  {id:'propostas',ic:'propostas',t:'Propostas',sub:'Ofertas e negociação',imob:1},
-  {id:'comissoes',ic:'comissoes',t:'Comissões',sub:'Corretagem a receber',imob:1},
-  {grp:'Patrimônio'},
-  {id:'patrimonio',ic:'patrimonio',t:'Patrimônio',sub:'Bens, dívidas e patrimônio líquido'},
-  {grp:'Sistema'},
-  {id:'relatorios',ic:'relatorios',t:'Relatórios',sub:'Análises e exportação'},
-  {id:'documentos',ic:'documentos',t:'Documentos',sub:'Boletos, notas e contratos'},
-  {id:'busca',ic:'busca',t:'Busca global',sub:'Encontre qualquer coisa'},
-  {id:'usuarios',ic:'usuarios',t:'Usuários',sub:'Permissões de acesso'},
-  {id:'auditoria',ic:'auditoria',t:'Auditoria',sub:'Histórico de alterações'},
+  {g:'financeiro',id:'painel',ic:'painel',t:'Painel',sub:'Visão financeira'},
+  {g:'financeiro',id:'contas',ic:'contas',t:'Contas',sub:'Bancos e saldos'},
+  {g:'financeiro',id:'cartoes',ic:'cartoes',t:'Cartões',sub:'Compras, faturas e parcelas'},
+  {g:'financeiro',id:'lancamentos',ic:'lancamentos',t:'Lançamentos',sub:'Entradas, saídas e transferências'},
+  {g:'financeiro',id:'extrato',ic:'extrato',t:'Extrato',sub:'Livro-caixa com saldo acumulado'},
+  {g:'financeiro',id:'orcamento',ic:'orcamento',t:'Orçamento',sub:'Limite por categoria e quanto ainda pode gastar'},
+  {g:'financeiro',id:'pagar',ic:'pagar',t:'Contas a pagar',sub:'Compromissos e vencimentos'},
+  {g:'financeiro',id:'receber',ic:'receber',t:'Contas a receber',sub:'Recebíveis'},
+  {g:'pessoal',id:'patrimonio',ic:'patrimonio',t:'Patrimônio',sub:'Bens, dívidas e patrimônio líquido'},
+  {g:'negocio',id:'fornecedores',ic:'fornecedores',t:'Fornecedores',sub:'Cadastro e contatos'},
+  {g:'obras',id:'obras',ic:'obras',t:'Obras',sub:'Construções, gastos e sócios'},
+  {g:'obras',id:'empreendimentos',ic:'layers',t:'Empreendimentos',sub:'Terrenos e projetos'},
+  {g:'obras',id:'socios',ic:'socios',t:'Sócios',sub:'Parceiros de obra'},
+  {g:'obras',id:'fornecedores',ic:'fornecedores',t:'Fornecedores',sub:'Cadastro e contatos'},
+  {g:'imob',id:'imoveis',ic:'imoveis',t:'Imóveis',sub:'Portfólio próprio e de terceiros'},
+  {g:'imob',id:'proprietarios',ic:'proprietarios',t:'Proprietários',sub:'Donos dos imóveis'},
+  {g:'imob',id:'leads',ic:'leads',t:'Leads / Funil',sub:'Clientes interessados'},
+  {g:'imob',id:'visitas',ic:'visitas',t:'Visitas',sub:'Agenda de visitas'},
+  {g:'imob',id:'propostas',ic:'propostas',t:'Propostas',sub:'Ofertas e negociação'},
+  {g:'imob',id:'comissoes',ic:'comissoes',t:'Comissões',sub:'Corretagem a receber'},
+  {g:'sistema',id:'relatorios',ic:'relatorios',t:'Relatórios',sub:'Análises e exportação'},
+  {g:'sistema',id:'documentos',ic:'documentos',t:'Documentos',sub:'Boletos, notas e contratos'},
+  {g:'sistema',id:'busca',ic:'busca',t:'Busca global',sub:'Encontre qualquer coisa'},
+  {g:'sistema',id:'usuarios',ic:'usuarios',t:'Usuários',sub:'Permissões de acesso'},
+  {g:'sistema',id:'auditoria',ic:'auditoria',t:'Auditoria',sub:'Histórico de alterações'},
 ];
 let ROUTE='painel',detailObra=null;
+function grupoVisivel(g){if(!g)return true;if(g.tipos==='*')return true;if(CTX==='')return true;/*Geral mostra tudo*/return g.tipos.includes(ctxTipo());}
 function renderNav(){
-  // Imobiliário só aparece na Corretagem (ou na visão Geral)
-  const mostraImob=(CTX===''||ctxTipo()==='corretagem');
-  $('#nav').innerHTML=NAV.filter(n=>mostraImob||!n.imob).map(n=>{
-    if(n.grp)return `<div class="nav-group">${n.grp}</div>`;
-    return `<a class="nav-item ${ROUTE===n.id?'active':''}" onclick="go('${n.id}')">${sicon(n.ic)}<span>${n.t}</span></a>`;
-  }).join('');
+  const seen={};let html='';
+  for(const grp of GROUPS){
+    if(!grupoVisivel(grp))continue;
+    const items=NAV.filter(n=>n.g===grp.key&&!seen[n.id]);
+    if(!items.length)continue;
+    html+=`<div class="nav-group">${grp.label}</div>`;
+    for(const n of items){seen[n.id]=1;html+=`<a class="nav-item ${ROUTE===n.id?'active':''}" onclick="go('${n.id}')">${sicon(n.ic)}<span>${n.t}</span></a>`;}
+  }
+  $('#nav').innerHTML=html;
 }
 function toggleNav(open){$('#sidebar').classList.toggle('open',open);$('#scrim').classList.toggle('show',open);}
 function go(id,arg){ROUTE=id;if(id==='obraDetail')detailObra=arg;toggleNav(false);window.scrollTo(0,0);renderNav();render();}
@@ -503,7 +514,7 @@ async function render(){
   let meta=NAV.find(n=>n.id===ROUTE)||{t:'',sub:''};
   if(ROUTE==='obraDetail')meta={t:'Obra',sub:'Gastos, sócios, etapas e documentação'};
   $('#pageTitle').textContent=meta.t;
-  const ctxLbl=CTX?('· '+(ctxEmpresa()?ctxEmpresa().nome:'')):'· Geral (consolidado)';
+  const ctxLbl=CTX===OBRAS_CTX?'· Obras':(CTX?('· '+(ctxEmpresa()?ctxEmpresa().nome:'')):'· Geral (consolidado)');
   $('#pageSub').textContent=meta.sub+'  '+ctxLbl;
   renderCtxBar();
   clearCharts();
@@ -557,7 +568,7 @@ async function renderPainel(c){
   const cp0=await dbList('contas_pagar','vencimento');
   const cr0=await dbList('contas_receber','vencimento');
   // filtra pelo contexto (empresa) selecionado no topo
-  const porCtx=(arr)=>CTX?arr.filter(x=>x.empresa_id===CTX):arr;
+  const _mf=moneyFilter();const porCtx=(arr)=>_mf?arr.filter(x=>x.empresa_id===_mf):arr;
   S.contasPagar=porCtx(cp0);S.contasReceber=porCtx(cr0);
   const txCtx=porCtx(S.transacoes).filter(t=>t.situacao==='pago');
   // fluxo mensal calculado dos lançamentos (respeita contexto)
@@ -734,7 +745,7 @@ async function renderLancamentos(c){
   await loadBasics();
   S.transacoes=await dbList('transacoes','data',false);
   $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formLanc()">${sicon('plus')}Novo lançamento</button>`;
-  const shown=S.transacoes.filter(t=>(lancSeg==='todos'||t.tipo===lancSeg)&&(!CTX||t.empresa_id===CTX));
+  const _mf=moneyFilter();const shown=S.transacoes.filter(t=>(lancSeg==='todos'||t.tipo===lancSeg)&&(!_mf||t.empresa_id===_mf));
   c.innerHTML=`
     <div class="toolbar"><div class="seg">
       ${[['todos','Todos'],['entrada','Entradas'],['saida','Saídas'],['transferencia','Transferências']].map(([k,l])=>`<button class="${lancSeg===k?'active':''}" onclick="lancSeg='${k}';render()">${l}</button>`).join('')}
@@ -788,7 +799,7 @@ function lancTipoChange(){
 function dueBadge(d){if(d===null)return '';const cls=d<0?'due-late':d<=5?'due-soon':'due-ok';const txt=d<0?`venceu há ${-d}d`:d===0?'hoje':`em ${d}d`;return `<span class="due-badge ${cls}">${txt}</span>`;}
 async function renderPagar(c){
   await loadBasics();
-  S.contasPagar=(await dbList('contas_pagar','vencimento')).filter(x=>!CTX||x.empresa_id===CTX);
+  {const _mf=moneyFilter();S.contasPagar=(await dbList('contas_pagar','vencimento')).filter(x=>!_mf||x.empresa_id===_mf);}
   $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formPagar()">${sicon('plus')}Nova conta</button>`;
   const pend=S.contasPagar.filter(x=>x.status!=='paga'&&x.status!=='cancelada');
   const total=sum(pend,x=>N(x.valor));
@@ -855,7 +866,7 @@ async function pagarConta(id){
 /* ================= CONTAS A RECEBER ================= */
 async function renderReceber(c){
   await loadBasics();
-  S.contasReceber=(await dbList('contas_receber','vencimento')).filter(x=>!CTX||x.empresa_id===CTX);
+  {const _mf=moneyFilter();S.contasReceber=(await dbList('contas_receber','vencimento')).filter(x=>!_mf||x.empresa_id===_mf);}
   $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formReceber()">${sicon('plus')}Novo recebível</button>`;
   const pend=S.contasReceber.filter(x=>['a_receber','atrasada','prevista'].includes(x.status));
   const total=sum(pend,x=>N(x.valor));
@@ -1703,7 +1714,7 @@ async function renderRelatorios(c){
   const inicio=periodoInicio(relPeriodo);
   await loadEmpresas();
   const{data:txs}=await SB.from('transacoes').select('*').gte('data',inicio).order('data',{ascending:false});
-  const T=(txs||[]).filter(t=>t.situacao==='pago'&&(!CTX||t.empresa_id===CTX));
+  const _mf=moneyFilter();const T=(txs||[]).filter(t=>t.situacao==='pago'&&(!_mf||t.empresa_id===_mf));
   const ent=sum(T.filter(t=>t.tipo==='entrada'),t=>N(t.valor));
   const sai=sum(T.filter(t=>t.tipo==='saida'),t=>N(t.valor));
   // por categoria (saídas)
@@ -1890,7 +1901,7 @@ async function renderAuditoria(c){
 let exPeriodo='mes', exEmpresa='', exConta='';
 async function renderExtrato(c){
   await loadBasics();
-  exEmpresa=CTX; // a empresa vem da aba de contexto no topo
+  exEmpresa=moneyFilter(); // a empresa vem da aba de contexto no topo
   S.transacoes=await dbList('transacoes','data',true); // asc p/ saldo corrido
   const inicio=periodoInicio(exPeriodo);
   // saldo inicial: base das contas (se filtrada 1 conta, só dela) + movimentos ANTES do período
@@ -1943,7 +1954,7 @@ async function renderExtrato(c){
 let orcMes=curMonth(), orcEmpresa='';
 async function renderOrcamento(c){
   await loadBasics();
-  orcEmpresa=CTX; // a empresa vem da aba de contexto no topo
+  orcEmpresa=moneyFilter(); // a empresa vem da aba de contexto no topo
   S.orcamentos=await dbList('orcamentos','created_at').catch(()=>[]);
   S.transacoes=await dbList('transacoes','data',false);
   const catsDesp=S.categorias.filter(x=>x.tipo==='saida');

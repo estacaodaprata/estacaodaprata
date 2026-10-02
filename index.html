@@ -319,7 +319,10 @@ const ICON={
   usuarios:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8M22 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11"/>',
   auditoria:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
   upload:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
-  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>'
+  download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
+  extrato:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/>',
+  orcamento:'<path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 2v10l8-4A10 10 0 0 0 12 2z"/>',
+  empresa:'<path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/>'
 };
 const sicon=(n)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[n]||''}</svg>`;
 
@@ -334,7 +337,11 @@ async function dbWhere(table,col,v,order='created_at'){const{data,error}=await S
 async function dbOne(table,id){const{data,error}=await SB.from(table).select('*').eq('id',id).single();if(error)throw error;return data;}
 
 /* cache em memória (recarregado após cada mutação) */
-const S={contas:[],saldos:[],cartoes:[],faturas:[],parcelas:[],transacoes:[],contasPagar:[],contasReceber:[],categorias:[],centros:[],fluxo:[],socios:[],obras:[],fornecedores:[],empreendimentos:[],imoveis:[],proprietarios:[],leads:[],visitas:[],propostas:[],comissoes:[],patrimonio:[],financiamentos:[]};
+const S={contas:[],saldos:[],cartoes:[],faturas:[],parcelas:[],transacoes:[],contasPagar:[],contasReceber:[],categorias:[],centros:[],fluxo:[],socios:[],obras:[],fornecedores:[],empreendimentos:[],imoveis:[],proprietarios:[],leads:[],visitas:[],propostas:[],comissoes:[],patrimonio:[],financiamentos:[],empresas:[],orcamentos:[]};
+const empresaNome=(id)=>{const e=S.empresas.find(x=>x.id===id);return e?e.nome:'—';};
+const empresaCor=(id)=>{const e=S.empresas.find(x=>x.id===id);return e?(e.cor||'#B08A45'):'#B0A08C';};
+const empresaTag=(id)=>{const e=S.empresas.find(x=>x.id===id);return e?`<span class="pill" style="background:${e.cor}22;color:${e.cor}">${esc(e.sufixo||e.nome)}</span>`:'';};
+async function loadEmpresas(){if(!S.empresas.length){try{S.empresas=await dbList('empresas','sufixo');}catch(e){S.empresas=[];}}}
 const imovelNome=(id)=>{const i=S.imoveis.find(x=>x.id===id);return i?(i.titulo||i.codigo||'imóvel'):'—';};
 const propNome=(id)=>{const p=S.proprietarios.find(x=>x.id===id);return p?p.nome:'—';};
 const leadNome=(id)=>{const l=S.leads.find(x=>x.id===id);return l?l.nome:'—';};
@@ -416,6 +423,8 @@ const NAV=[
   {id:'contas',ic:'contas',t:'Contas',sub:'Bancos e saldos'},
   {id:'cartoes',ic:'cartoes',t:'Cartões',sub:'Compras, faturas e parcelas'},
   {id:'lancamentos',ic:'lancamentos',t:'Lançamentos',sub:'Entradas, saídas e transferências'},
+  {id:'extrato',ic:'extrato',t:'Extrato',sub:'Livro-caixa com saldo acumulado'},
+  {id:'orcamento',ic:'orcamento',t:'Orçamento',sub:'Limite por categoria e quanto ainda pode gastar'},
   {id:'pagar',ic:'pagar',t:'Contas a pagar',sub:'Compromissos e vencimentos'},
   {id:'receber',ic:'receber',t:'Contas a receber',sub:'Recebíveis'},
   {grp:'Obras & Negócio'},
@@ -469,6 +478,8 @@ async function render(){
     else if(ROUTE==='contas')await renderContas(c);
     else if(ROUTE==='cartoes')await renderCartoes(c);
     else if(ROUTE==='lancamentos')await renderLancamentos(c);
+    else if(ROUTE==='extrato')await renderExtrato(c);
+    else if(ROUTE==='orcamento')await renderOrcamento(c);
     else if(ROUTE==='pagar')await renderPagar(c);
     else if(ROUTE==='receber')await renderReceber(c);
     else if(ROUTE==='obras')await renderObras(c);
@@ -497,7 +508,7 @@ async function render(){
 function kpiCard(k){return `<div class="kpi"><div class="top"><span class="klbl">${k.lbl}</span><div class="kicon tint-${k.tint||'brass'}">${sicon(k.ic||'wallet')}</div></div><div class="kval mono">${k.val}</div>${k.sub?`<div class="ksub">${k.sub}</div>`:''}</div>`;}
 function emptyCard(icon,titulo,texto,btn){return `<div class="card"><div class="empty">${sicon(icon)}<h3>${titulo}</h3><p>${texto}</p>${btn||''}</div></div>`;}
 async function reloadContas(){S.contas=await dbList('contas_bancarias');S.saldos=await dbView('v_saldos_contas');}
-async function loadBasics(){if(!S.categorias.length)S.categorias=await dbList('categorias','nome');if(!S.contas.length)await reloadContas();}
+async function loadBasics(){if(!S.categorias.length)S.categorias=await dbList('categorias','nome');if(!S.contas.length)await reloadContas();await loadEmpresas();}
 
 /* ================= PAINEL ================= */
 async function renderPainel(c){
@@ -689,7 +700,7 @@ async function renderLancamentos(c){
         return `<tr><td class="mono" style="font-size:12.5px">${fmtDate(t.data)}</td>
         <td><div class="row-title">${esc(t.descricao||'—')}</div>${isT?`<div class="row-sub">→ ${esc(contaNome(t.conta_destino_id))}</div>`:''}</td>
         <td class="row-sub">${esc(contaNome(t.conta_id))}</td>
-        <td class="row-sub">${isT?'<span class="pill pill-blue">transferência</span>':esc(catNome(t.categoria_id))}</td>
+        <td class="row-sub">${isT?'<span class="pill pill-blue">transferência</span>':esc(catNome(t.categoria_id))} ${t.empresa_id?empresaTag(t.empresa_id):''}</td>
         <td class="num"><b class="${cls}">${t.tipo==='entrada'?'+ ':t.tipo==='saida'?'− ':''}${money(t.valor)}</b></td>
         <td><div class="t-actions"><button class="icon-btn" onclick='formLanc(${JSON.stringify(t.id)})'>${sicon('edit')}</button><button class="icon-btn del" onclick='delReg("transacoes","${t.id}","Lançamento")'>${sicon('trash')}</button></div></td></tr>`;}).join('')}
     </tbody></table>`:`<div class="empty">${sicon('lancamentos')}<h3>Nenhum lançamento</h3><p>Registre entradas (recebimentos), saídas (pagamentos à vista/pix) e transferências entre contas. Transferência não conta como receita nem despesa.</p><button class="btn btn-brass" onclick="formLanc()">${sicon('plus')}Novo lançamento</button></div>`}</div></div>`;
@@ -706,13 +717,14 @@ function formLanc(id){
     <div class="field" id="wrap_conta"><label id="lbl_conta">Conta</label><select id="m_conta_id">${S.contas.map(cc=>`<option value="${cc.id}" ${t.conta_id===cc.id?'selected':''}>${esc(cc.banco+' · '+cc.nome)}</option>`).join('')}</select></div>
     <div class="field ${t.tipo==='transferencia'?'':'hide'}" id="wrap_dest"><label>Conta destino</label><select id="m_conta_destino_id">${S.contas.map(cc=>`<option value="${cc.id}" ${t.conta_destino_id===cc.id?'selected':''}>${esc(cc.banco+' · '+cc.nome)}</option>`).join('')}</select></div>
     <div class="field ${t.tipo==='transferencia'?'hide':''}" id="wrap_cat"><label>Categoria</label><select id="m_categoria_id"><option value="">—</option>${cats(t.tipo||'saida').map(c=>`<option value="${c.id}" ${t.categoria_id===c.id?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></div>
+    <div class="field"><label>Empresa</label><select id="m_empresa_id"><option value="">—</option>${S.empresas.map(e=>`<option value="${e.id}" ${t.empresa_id===e.id?'selected':''}>${esc(e.nome)}</option>`).join('')}</select></div>
     <div class="field"><label>Forma</label><select id="m_forma">${['pix','dinheiro','debito','transferencia','boleto'].map(f=>`<option value="${f}" ${t.forma===f?'selected':''}>${f}</option>`).join('')}</select></div>
   `,async()=>{
     const tipo=val('m_tipo');const v=N(val('m_valor'));
     if(!val('m_descricao')||!v){toast('Descrição e valor são obrigatórios',1);return false;}
     if(!S.contas.length){toast('Cadastre uma conta bancária primeiro',1);return false;}
     const row={tipo,data:val('m_data'),descricao:val('m_descricao'),valor:v,conta_id:val('m_conta_id')||null,
-      forma:val('m_forma'),situacao:'pago',origem_tipo:'manual'};
+      empresa_id:val('m_empresa_id')||null,forma:val('m_forma'),situacao:'pago',origem_tipo:'manual'};
     if(tipo==='transferencia'){row.conta_destino_id=val('m_conta_destino_id')||null;row.categoria_id=null;
       if(row.conta_id===row.conta_destino_id){toast('Origem e destino devem ser diferentes',1);return false;}}
     else{row.categoria_id=val('m_categoria_id')||null;row.conta_destino_id=null;}
@@ -763,10 +775,11 @@ function formPagar(id){
     <div class="field"><label>Vencimento</label><input id="m_vencimento" type="date" value="${(x.vencimento||today())}"></div>
     <div class="field"><label>Categoria</label><select id="m_categoria_id"><option value="">—</option>${cats.map(c=>`<option value="${c.id}" ${x.categoria_id===c.id?'selected':''}>${esc(c.nome)}</option>`).join('')}</select></div>
     <div class="field"><label>Recorrência</label><select id="m_recorrencia">${['unica','mensal','anual','semanal','trimestral'].map(r=>`<option value="${r}" ${x.recorrencia===r?'selected':''}>${r}</option>`).join('')}</select></div>
+    <div class="field"><label>Empresa</label><select id="m_empresa_id"><option value="">—</option>${S.empresas.map(e=>`<option value="${e.id}" ${x.empresa_id===e.id?'selected':''}>${esc(e.nome)}</option>`).join('')}</select></div>
     <div class="field full"><label>Link do boleto / 2ª via <span class="hint">(cola o link fixo do site da conta)</span></label><input id="m_link" type="url" value="${esc(x.link||'')}" placeholder="https://..."></div>
   `,async()=>{
     const v=N(val('m_valor'));if(!val('m_descricao')||!v){toast('Descrição e valor são obrigatórios',1);return false;}
-    const row={descricao:val('m_descricao'),valor:v,vencimento:val('m_vencimento'),categoria_id:val('m_categoria_id')||null,recorrencia:val('m_recorrencia'),link:val('m_link')||null};
+    const row={descricao:val('m_descricao'),valor:v,vencimento:val('m_vencimento'),categoria_id:val('m_categoria_id')||null,recorrencia:val('m_recorrencia'),empresa_id:val('m_empresa_id')||null,link:val('m_link')||null};
     if(id)await dbUpdate('contas_pagar',id,row);else await dbInsert('contas_pagar',{...row,status:'pendente'});
     toast('Conta salva');return true;
   });
@@ -1826,6 +1839,133 @@ async function renderAuditoria(c){
       <td class="row-sub">${esc(a.tabela)}</td></tr>`).join('')}
   </tbody></table>`:`<div class="empty">${sicon('auditoria')}<h3>Sem registros ainda</h3><p>Conforme as pessoas usarem o sistema, cada criação/alteração/exclusão nas tabelas financeiras fica registrada aqui.</p></div>`}</div></div>`;
 }
+
+/* ================= EXTRATO (livro-caixa com saldo acumulado) ================= */
+let exPeriodo='mes', exEmpresa='', exConta='';
+async function renderExtrato(c){
+  await loadBasics();
+  S.transacoes=await dbList('transacoes','data',true); // asc p/ saldo corrido
+  const inicio=periodoInicio(exPeriodo);
+  // saldo inicial: base das contas (se filtrada 1 conta, só dela) + movimentos ANTES do período
+  let contasBase=exConta?S.contas.filter(x=>x.id===exConta):S.contas;
+  let saldoInicial=sum(contasBase,x=>N(x.saldo_inicial));
+  const antes=S.transacoes.filter(t=>t.situacao==='pago'&&(''+t.data)<inicio);
+  const noPeriodo=S.transacoes.filter(t=>t.situacao==='pago'&&(''+t.data)>=inicio
+    &&(!exEmpresa||t.empresa_id===exEmpresa)
+    &&(!exConta||t.conta_id===exConta||t.conta_destino_id===exConta));
+  const efeito=(t)=>{ // efeito no conjunto de contas-base (ou geral)
+    let d=0;
+    const inBase=(id)=>!exConta?!!id:id===exConta;
+    if(t.tipo==='entrada'&&inBase(t.conta_id))d+=N(t.valor);
+    else if(t.tipo==='saida'&&inBase(t.conta_id))d-=N(t.valor);
+    else if(t.tipo==='transferencia'){if(inBase(t.conta_destino_id))d+=N(t.valor);if(inBase(t.conta_id))d-=N(t.valor);}
+    return d;
+  };
+  // saldo acumulado até antes do período
+  antes.filter(t=>!exEmpresa||t.empresa_id===exEmpresa).forEach(t=>{saldoInicial+=efeito(t);});
+  let saldo=saldoInicial;
+  const linhas=noPeriodo.map(t=>{const d=efeito(t);saldo+=d;return {t,d,saldo};});
+  const totEnt=sum(noPeriodo.filter(t=>t.tipo==='entrada'),t=>N(t.valor));
+  const totSai=sum(noPeriodo.filter(t=>t.tipo==='saida'),t=>N(t.valor));
+
+  $('#topbarRight').innerHTML=`<button class="btn btn-ghost" onclick="gerenciarEmpresas()">${sicon('empresa')}Empresas</button>`;
+  c.innerHTML=`
+    <div class="toolbar">
+      <div class="seg">${[['mes','Mês'],['3m','3m'],['6m','6m'],['12m','12m'],['ano','Ano'],['tudo','Tudo']].map(([k,l])=>`<button class="${exPeriodo===k?'active':''}" onclick="exPeriodo='${k}';render()">${l}</button>`).join('')}</div>
+      <select onchange="exEmpresa=this.value;render()" style="padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card)"><option value="">Todas as empresas</option>${S.empresas.map(e=>`<option value="${e.id}" ${exEmpresa===e.id?'selected':''}>${esc(e.nome)}</option>`).join('')}</select>
+      <select onchange="exConta=this.value;render()" style="padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card)"><option value="">Todas as contas</option>${S.contas.map(cc=>`<option value="${cc.id}" ${exConta===cc.id?'selected':''}>${esc(cc.banco+' · '+cc.nome)}</option>`).join('')}</select>
+    </div>
+    <div class="kpi-grid">
+      ${kpiCard({lbl:'Saldo inicial do período',val:money0(saldoInicial),ic:'wallet',tint:'brass'})}
+      ${kpiCard({lbl:'Entradas',val:kmoney(totEnt),ic:'down',tint:'green'})}
+      ${kpiCard({lbl:'Saídas',val:kmoney(totSai),ic:'up',tint:'red'})}
+      ${kpiCard({lbl:'Saldo final',val:money0(saldo),sub:(saldo-saldoInicial>=0?'+':'')+money0(saldo-saldoInicial)+' no período',ic:'extrato',tint:'teal'})}
+    </div>
+    <div class="card"><div class="card-h"><h3>Extrato — saldo acumulado</h3><span class="sub">cada linha soma na anterior</span></div>
+    <div class="tbl-wrap">${linhas.length?`<table class="data"><thead><tr><th>Data</th><th>Descrição</th><th>Empresa</th><th class="num">Entrada</th><th class="num">Saída</th><th class="num">Saldo</th></tr></thead><tbody>
+      <tr style="background:#FAFBF8"><td colspan="5" class="row-sub" style="text-align:right">Saldo inicial</td><td class="num"><b>${money(saldoInicial)}</b></td></tr>
+      ${linhas.map(({t,d,saldo})=>`<tr><td class="mono" style="font-size:12.5px">${fmtDate(t.data)}</td>
+        <td><div class="row-title">${esc(t.descricao||'—')}</div><div class="row-sub">${esc(contaNome(t.conta_id))}${t.tipo==='transferencia'?' → '+esc(contaNome(t.conta_destino_id)):(t.categoria_id?' · '+esc(catNome(t.categoria_id)):'')}</div></td>
+        <td>${t.empresa_id?empresaTag(t.empresa_id):'<span class="row-sub">—</span>'}</td>
+        <td class="num pos">${d>0?money(d):''}</td>
+        <td class="num neg">${d<0?money(-d):''}</td>
+        <td class="num"><b class="${saldo<0?'neg':''}">${money(saldo)}</b></td></tr>`).join('')}
+    </tbody></table>`:`<div class="empty">${sicon('extrato')}<h3>Sem movimento no período</h3><p>Escolha outro período ou registre lançamentos. O saldo corrido aparece aqui, estilo extrato bancário.</p></div>`}</div></div>`;
+}
+
+/* ================= ORÇAMENTO (limite × já gastei × ainda posso gastar) ================= */
+let orcMes=curMonth(), orcEmpresa='';
+async function renderOrcamento(c){
+  await loadBasics();
+  S.orcamentos=await dbList('orcamentos','created_at').catch(()=>[]);
+  S.transacoes=await dbList('transacoes','data',false);
+  const catsDesp=S.categorias.filter(x=>x.tipo==='saida');
+  const gastoCat=(catId)=>sum(S.transacoes.filter(t=>t.tipo==='saida'&&t.situacao==='pago'&&t.categoria_id===catId&&monthKey(t.data)===orcMes&&(!orcEmpresa||t.empresa_id===orcEmpresa)),t=>N(t.valor));
+  const orcDe=(catId)=>S.orcamentos.find(o=>o.categoria_id===catId&&((orcEmpresa&&o.empresa_id===orcEmpresa)||(!orcEmpresa&&!o.empresa_id)))||S.orcamentos.find(o=>o.categoria_id===catId&&!o.empresa_id);
+  const linhas=catsDesp.map(cat=>{const o=orcDe(cat.id);const limite=N(o?o.limite:0);const gasto=gastoCat(cat.id);return {cat,limite,gasto,resta:limite-gasto,pct:limite?Math.min(100,gasto/limite*100):0};}).filter(l=>l.limite>0||l.gasto>0);
+  const totLim=sum(linhas,l=>l.limite),totGasto=sum(linhas,l=>l.gasto);
+  // meses p/ seletor (12 últimos)
+  const meses=[];{const d=new Date();for(let i=0;i<12;i++){meses.push(d.toISOString().slice(0,7));d.setMonth(d.getMonth()-1);}}
+
+  $('#topbarRight').innerHTML=`<button class="btn btn-ghost" onclick="gerenciarEmpresas()">${sicon('empresa')}Empresas</button> <button class="btn btn-brass" onclick="formOrcamento()">${sicon('plus')}Definir limite</button>`;
+  c.innerHTML=`
+    <div class="toolbar">
+      <select onchange="orcMes=this.value;render()" style="padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card)">${meses.map(m=>`<option value="${m}" ${orcMes===m?'selected':''}>${fmtMonth(m)}</option>`).join('')}</select>
+      <select onchange="orcEmpresa=this.value;render()" style="padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card)"><option value="">Todas as empresas</option>${S.empresas.map(e=>`<option value="${e.id}" ${orcEmpresa===e.id?'selected':''}>${esc(e.nome)}</option>`).join('')}</select>
+    </div>
+    <div class="kpi-grid">
+      ${kpiCard({lbl:'Previsto (limites)',val:kmoney(totLim),ic:'orcamento',tint:'brass'})}
+      ${kpiCard({lbl:'Realizado (já gastei)',val:kmoney(totGasto),ic:'up',tint:'red'})}
+      ${kpiCard({lbl:'Ainda posso gastar',val:kmoney(totLim-totGasto),sub:totLim?pctTxt(totGasto/totLim*100)+' usado':'',ic:'wallet',tint:(totLim-totGasto)>=0?'green':'red'})}
+    </div>
+    <div class="card"><div class="card-h"><h3>Orçamento por categoria</h3><span class="sub">${fmtMonth(orcMes)}${orcEmpresa?' · '+esc(empresaNome(orcEmpresa)):' · todas as empresas'}</span></div>
+    <div class="tbl-wrap">${linhas.length?`<table class="data"><thead><tr><th>Categoria</th><th class="num">Limite</th><th class="num">Já gastei</th><th class="num">Ainda posso</th><th style="width:30%">Uso</th><th></th></tr></thead><tbody>
+      ${linhas.map(l=>`<tr><td class="row-title">${esc(l.cat.nome)}</td>
+        <td class="num">${l.limite?money(l.limite):'<span class="row-sub">—</span>'}</td>
+        <td class="num">${money(l.gasto)}</td>
+        <td class="num"><b class="${l.resta<0?'neg':'pos'}">${money(l.resta)}</b></td>
+        <td><div class="prog ${l.pct>=100?'over':''}" style="min-width:120px"><i style="width:${l.pct}%"></i></div><div class="row-sub" style="margin-top:3px">${l.limite?pctTxt(l.pct)+(l.resta<0?' · estourou':''):'sem limite'}</div></td>
+        <td><div class="t-actions"><button class="icon-btn" onclick='formOrcamento("${l.cat.id}")'>${sicon('edit')}</button></div></td></tr>`).join('')}
+    </tbody></table>`:`<div class="empty">${sicon('orcamento')}<h3>Nenhum limite definido</h3><p>Defina um limite mensal por categoria (Casa, Alimentação, Transporte…). O "já gastei" e o "ainda posso gastar" são somados sozinhos dos lançamentos.</p><button class="btn btn-brass" onclick="formOrcamento()">${sicon('plus')}Definir limite</button></div>`}</div></div>`;
+}
+function pctTxt(p){return (Number(p)||0).toFixed(0)+'%';}
+async function formOrcamento(catId){
+  await loadBasics();
+  if(!S.orcamentos.length)S.orcamentos=await dbList('orcamentos','created_at').catch(()=>[]);
+  const catsDesp=S.categorias.filter(x=>x.tipo==='saida');
+  const existente=catId?S.orcamentos.find(o=>o.categoria_id===catId&&((orcEmpresa&&o.empresa_id===orcEmpresa)||(!orcEmpresa&&!o.empresa_id))):null;
+  openModalK('orcamento:'+(catId||'new')+':'+(orcEmpresa||'all'),'Limite da categoria',`
+    <div class="field full"><label>Categoria <span class="hint">*</span></label><select id="m_categoria_id" ${catId?'disabled':''}>${catsDesp.map(cc=>`<option value="${cc.id}" ${(catId===cc.id||existente&&existente.categoria_id===cc.id)?'selected':''}>${esc(cc.nome)}</option>`).join('')}</select></div>
+    <div class="field full"><label>Empresa <span class="hint">(deixe "todas" para o limite geral)</span></label><select id="m_empresa_id"><option value="">Todas as empresas</option>${S.empresas.map(e=>`<option value="${e.id}" ${((existente&&existente.empresa_id===e.id)||(!existente&&orcEmpresa===e.id))?'selected':''}>${esc(e.nome)}</option>`).join('')}</select></div>
+    <div class="field full"><label>Limite mensal</label><div class="prefix"><input id="m_limite" type="text" inputmode="decimal" class="moeda" value="${existente?existente.limite:''}"></div></div>
+  `,async()=>{
+    const cat=catId||val('m_categoria_id');const emp=val('m_empresa_id')||null;const limite=N(val('m_limite'));
+    if(!cat){toast('Escolha a categoria',1);return false;}
+    const atual=S.orcamentos.find(o=>o.categoria_id===cat&&(o.empresa_id||null)===(emp||null));
+    if(atual)await dbUpdate('orcamentos',atual.id,{limite});
+    else await dbInsert('orcamentos',{categoria_id:cat,empresa_id:emp,limite});
+    toast('Limite salvo');return true;
+  });
+}
+
+/* ================= GESTÃO DE EMPRESAS ================= */
+async function gerenciarEmpresas(){
+  await loadEmpresas();
+  const linhas=()=>S.empresas.map(e=>`<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px" data-id="${e.id}">
+    <input type="color" value="${esc(e.cor||'#B08A45')}" onchange="updEmpresa('${e.id}','cor',this.value)" style="width:34px;height:34px;border:none;border-radius:8px;padding:0;background:none;cursor:pointer">
+    <input value="${esc(e.nome)}" onchange="updEmpresa('${e.id}','nome',this.value)" style="flex:1;padding:8px 11px;border:1px solid var(--line);border-radius:8px">
+    <input value="${esc(e.sufixo||'')}" onchange="updEmpresa('${e.id}','sufixo',this.value)" placeholder="sufixo" style="width:72px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;text-align:center">
+    <button class="icon-btn del" onclick="rmEmpresa('${e.id}')">${sicon('trash')}</button></div>`).join('');
+  openModal('Empresas','<div class="field full" style="grid-column:1/-1"><label>Separe seus CNPJs / origens de dinheiro</label><div id="empList">'+(linhas()||'<div class="row-sub">Nenhuma empresa.</div>')+'</div><button class="add-line" onclick="addEmpresa()">'+sicon('plus')+'Adicionar empresa</button></div>',null);
+  $('#modalSaveBtn').textContent='Fechar';$('#modalSaveBtn').onclick=()=>{closeModal();render();};
+}
+async function addEmpresa(){const e=await dbInsert('empresas',{nome:'Nova empresa',sufixo:'',cor:'#B08A45'});S.empresas.push(e);$('#empList').insertAdjacentHTML('beforeend',`<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px" data-id="${e.id}">
+  <input type="color" value="#B08A45" onchange="updEmpresa('${e.id}','cor',this.value)" style="width:34px;height:34px;border:none;border-radius:8px;padding:0;background:none;cursor:pointer">
+  <input value="Nova empresa" onchange="updEmpresa('${e.id}','nome',this.value)" style="flex:1;padding:8px 11px;border:1px solid var(--line);border-radius:8px">
+  <input value="" onchange="updEmpresa('${e.id}','sufixo',this.value)" placeholder="sufixo" style="width:72px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;text-align:center">
+  <button class="icon-btn del" onclick="rmEmpresa('${e.id}')">${sicon('trash')}</button></div>`);}
+async function updEmpresa(id,campo,v){try{await dbUpdate('empresas',id,{[campo]:v});const e=S.empresas.find(x=>x.id===id);if(e)e[campo]=v;toast('Salvo');}catch(err){toast(traduzErro(err.message),1);}}
+async function rmEmpresa(id){if(!confirm('Remover esta empresa? Os lançamentos ficam sem empresa, mas não são apagados.'))return;try{await dbDelete('empresas',id);S.empresas=S.empresas.filter(x=>x.id!==id);const el=document.querySelector('#empList [data-id="'+id+'"]');if(el)el.remove();toast('Empresa removida');}catch(e){toast(traduzErro(e.message),1);}}
 
 /* ================= MODAL genérico ================= */
 let modalSave=null,currentDraftKey=null;

@@ -194,6 +194,16 @@ table.data td.num{text-align:right;font-family:'IBM Plex Mono';font-variant-nume
   .form-grid{grid-template-columns:1fr}.kpi .kval{font-size:21px}
 }
 .hide{display:none!important}
+/* ---------- CONTEXT BAR (Pessoal / empresas no topo) ---------- */
+.ctxbar{position:sticky;top:0;z-index:25;display:flex;gap:6px;align-items:center;padding:10px 30px 0;background:var(--bg);border-bottom:1px solid #2A241A;overflow-x:auto}
+.ctxbar::-webkit-scrollbar{height:0}
+.ctx-tab{display:inline-flex;align-items:center;gap:7px;padding:9px 16px;border-radius:10px 10px 0 0;font-size:13px;font-weight:600;color:#B3A68F;white-space:nowrap;transition:.14s;border:1px solid transparent;border-bottom:none;cursor:pointer}
+.ctx-tab:hover{color:#F3ECDD;background:#241E14}
+.ctx-tab.active{background:var(--surface);color:var(--ink)}
+.ctx-tab .cdot{width:9px;height:9px;border-radius:50%;flex:none}
+.ctx-tab.add{color:var(--brass-l);font-weight:600}
+.ctx-tab.add:hover{background:#241E14}
+@media(max-width:860px){.ctxbar{padding:8px 14px 0}}
 body.ro .btn-brass, body.ro .t-actions, body.ro .add-line, body.ro .icon-btn.del{display:none!important}
 .ro-badge{background:var(--amber-bg);color:var(--amber);font-size:12px;font-weight:600;padding:8px 14px;border-radius:10px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
 .ro-badge svg{width:16px;height:16px}
@@ -249,6 +259,7 @@ body.ro .btn-brass, body.ro .t-actions, body.ro .add-line, body.ro .icon-btn.del
       <button class="hamb" onclick="toggleNav(true)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
       <div class="monogram"><svg viewBox="0 0 46 46" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="42" height="42" rx="11" fill="#141210"/><rect x="2.9" y="2.9" width="40.2" height="40.2" rx="10.2" fill="none" stroke="#B08A45" stroke-width="1.5"/><path d="M13 21.5 L23 13 L33 21.5" fill="none" stroke="#DCC085" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/><text x="23" y="33.5" text-anchor="middle" font-family="Playfair Display,Georgia,serif" font-weight="700" font-size="16" fill="#DCC085" letter-spacing="0.5">CV</text></svg></div><h1>Central Financeira</h1>
     </div>
+    <div class="ctxbar" id="ctxbar"></div>
     <div class="topbar">
       <div class="topbar-titles"><h2 id="pageTitle">Painel</h2><p id="pageSub">Visão financeira</p></div>
       <div class="topbar-right" id="topbarRight"></div>
@@ -395,7 +406,28 @@ async function showApp(session){
   $('#loginScreen').classList.add('hide');$('#appShell').classList.remove('hide');
   $('#whoami').textContent=session?.user?.email||'';
   await ensurePerfil(session);
-  renderNav();go('painel');
+  await loadEmpresas();
+  try{CTX=localStorage.getItem('cv_ctx')||'';}catch(e){CTX='';}
+  if(CTX&&!S.empresas.find(e=>e.id===CTX))CTX='';
+  renderCtxBar();renderNav();go('painel');
+}
+
+/* ---------- CONTEXTO (Pessoal / empresas no topo) ---------- */
+let CTX=''; // '' = Geral (consolidado); senão = empresa_id
+function ctxEmpresa(){return S.empresas.find(e=>e.id===CTX)||null;}
+function ctxTipo(){const e=ctxEmpresa();return e?(e.tipo||'empresa'):'geral';}
+function ctxDefault(){return CTX||null;} // empresa padrão p/ novos lançamentos
+function setCtx(id){CTX=id||'';try{localStorage.setItem('cv_ctx',CTX);}catch(e){}
+  // se saiu da corretagem e estava numa tela imobiliária, volta ao painel
+  const imobRotas=['imoveis','proprietarios','leads','visitas','propostas','comissoes'];
+  if(ctxTipo()!=='corretagem'&&CTX!==''&&imobRotas.includes(ROUTE))ROUTE='painel';
+  renderCtxBar();renderNav();render();}
+function renderCtxBar(){
+  const bar=$('#ctxbar');if(!bar)return;
+  const tabs=[`<div class="ctx-tab ${CTX===''?'active':''}" onclick="setCtx('')">${sicon('layers')}<span>Geral</span></div>`]
+    .concat(S.empresas.map(e=>`<div class="ctx-tab ${CTX===e.id?'active':''}" onclick="setCtx('${e.id}')"><span class="cdot" style="background:${esc(e.cor||'#B08A45')}"></span><span>${esc(e.sufixo||e.nome)}</span></div>`))
+    .concat([`<div class="ctx-tab add" onclick="gerenciarEmpresas()">${sicon('plus')}<span>Empresa</span></div>`]);
+  bar.innerHTML=tabs.join('');
 }
 async function ensurePerfil(session){
   S.papel='admin';S.readonly=false;S.perfil=null;
@@ -432,13 +464,13 @@ const NAV=[
   {id:'empreendimentos',ic:'layers',t:'Empreendimentos',sub:'Terrenos e projetos'},
   {id:'socios',ic:'socios',t:'Sócios',sub:'Parceiros de obra'},
   {id:'fornecedores',ic:'fornecedores',t:'Fornecedores',sub:'Cadastro e contatos'},
-  {grp:'Imobiliário'},
-  {id:'imoveis',ic:'imoveis',t:'Imóveis',sub:'Portfólio próprio e de terceiros'},
-  {id:'proprietarios',ic:'proprietarios',t:'Proprietários',sub:'Donos dos imóveis'},
-  {id:'leads',ic:'leads',t:'Leads / Funil',sub:'Clientes interessados'},
-  {id:'visitas',ic:'visitas',t:'Visitas',sub:'Agenda de visitas'},
-  {id:'propostas',ic:'propostas',t:'Propostas',sub:'Ofertas e negociação'},
-  {id:'comissoes',ic:'comissoes',t:'Comissões',sub:'Corretagem a receber'},
+  {grp:'Imobiliário (Corretagem)',imob:1},
+  {id:'imoveis',ic:'imoveis',t:'Imóveis',sub:'Portfólio próprio e de terceiros',imob:1},
+  {id:'proprietarios',ic:'proprietarios',t:'Proprietários',sub:'Donos dos imóveis',imob:1},
+  {id:'leads',ic:'leads',t:'Leads / Funil',sub:'Clientes interessados',imob:1},
+  {id:'visitas',ic:'visitas',t:'Visitas',sub:'Agenda de visitas',imob:1},
+  {id:'propostas',ic:'propostas',t:'Propostas',sub:'Ofertas e negociação',imob:1},
+  {id:'comissoes',ic:'comissoes',t:'Comissões',sub:'Corretagem a receber',imob:1},
   {grp:'Patrimônio'},
   {id:'patrimonio',ic:'patrimonio',t:'Patrimônio',sub:'Bens, dívidas e patrimônio líquido'},
   {grp:'Sistema'},
@@ -450,7 +482,9 @@ const NAV=[
 ];
 let ROUTE='painel',detailObra=null;
 function renderNav(){
-  $('#nav').innerHTML=NAV.map(n=>{
+  // Imobiliário só aparece na Corretagem (ou na visão Geral)
+  const mostraImob=(CTX===''||ctxTipo()==='corretagem');
+  $('#nav').innerHTML=NAV.filter(n=>mostraImob||!n.imob).map(n=>{
     if(n.grp)return `<div class="nav-group">${n.grp}</div>`;
     return `<a class="nav-item ${ROUTE===n.id?'active':''}" onclick="go('${n.id}')">${sicon(n.ic)}<span>${n.t}</span></a>`;
   }).join('');
@@ -468,7 +502,10 @@ function toast(msg,err){const t=$('#toast');t.className='toast'+(err?' err':'');
 async function render(){
   let meta=NAV.find(n=>n.id===ROUTE)||{t:'',sub:''};
   if(ROUTE==='obraDetail')meta={t:'Obra',sub:'Gastos, sócios, etapas e documentação'};
-  $('#pageTitle').textContent=meta.t;$('#pageSub').textContent=meta.sub;
+  $('#pageTitle').textContent=meta.t;
+  const ctxLbl=CTX?('· '+(ctxEmpresa()?ctxEmpresa().nome:'')):'· Geral (consolidado)';
+  $('#pageSub').textContent=meta.sub+'  '+ctxLbl;
+  renderCtxBar();
   clearCharts();
   const c=$('#content');
   c.innerHTML=`<div class="loading"><div class="spin"></div> Carregando…</div>`;
@@ -512,13 +549,20 @@ async function loadBasics(){if(!S.categorias.length)S.categorias=await dbList('c
 
 /* ================= PAINEL ================= */
 async function renderPainel(c){
-  await reloadContas();
+  await reloadContas();await loadEmpresas();
   S.cartoes=await dbList('cartoes');
   S.parcelas=await dbList('parcelas','competencia');
   S.faturas=await dbList('faturas','competencia');
-  S.contasPagar=await dbList('contas_pagar','vencimento');
-  S.contasReceber=await dbList('contas_receber','vencimento');
-  S.fluxo=await dbView('v_fluxo_mensal');
+  S.transacoes=await dbList('transacoes','data',true);
+  const cp0=await dbList('contas_pagar','vencimento');
+  const cr0=await dbList('contas_receber','vencimento');
+  // filtra pelo contexto (empresa) selecionado no topo
+  const porCtx=(arr)=>CTX?arr.filter(x=>x.empresa_id===CTX):arr;
+  S.contasPagar=porCtx(cp0);S.contasReceber=porCtx(cr0);
+  const txCtx=porCtx(S.transacoes).filter(t=>t.situacao==='pago');
+  // fluxo mensal calculado dos lançamentos (respeita contexto)
+  const fmap={};txCtx.filter(t=>t.tipo!=='transferencia').forEach(t=>{const k=monthKey(t.data);fmap[k]=fmap[k]||{mes:k+'-01',entradas:0,saidas:0};fmap[k][t.tipo==='entrada'?'entradas':'saidas']+=N(t.valor);});
+  S.fluxo=Object.keys(fmap).sort().map(k=>fmap[k]);
 
   const saldoTotal=sum(S.saldos,x=>N(x.saldo_atual));
   const aPagar=sum(S.contasPagar.filter(x=>['pendente','agendada','vencida'].includes(x.status)),x=>N(x.valor));
@@ -690,7 +734,7 @@ async function renderLancamentos(c){
   await loadBasics();
   S.transacoes=await dbList('transacoes','data',false);
   $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formLanc()">${sicon('plus')}Novo lançamento</button>`;
-  const shown=S.transacoes.filter(t=>lancSeg==='todos'||t.tipo===lancSeg);
+  const shown=S.transacoes.filter(t=>(lancSeg==='todos'||t.tipo===lancSeg)&&(!CTX||t.empresa_id===CTX));
   c.innerHTML=`
     <div class="toolbar"><div class="seg">
       ${[['todos','Todos'],['entrada','Entradas'],['saida','Saídas'],['transferencia','Transferências']].map(([k,l])=>`<button class="${lancSeg===k?'active':''}" onclick="lancSeg='${k}';render()">${l}</button>`).join('')}
@@ -706,7 +750,7 @@ async function renderLancamentos(c){
     </tbody></table>`:`<div class="empty">${sicon('lancamentos')}<h3>Nenhum lançamento</h3><p>Registre entradas (recebimentos), saídas (pagamentos à vista/pix) e transferências entre contas. Transferência não conta como receita nem despesa.</p><button class="btn btn-brass" onclick="formLanc()">${sicon('plus')}Novo lançamento</button></div>`}</div></div>`;
 }
 function formLanc(id){
-  const t=id?S.transacoes.find(x=>x.id===id):{tipo:'saida',data:today(),situacao:'pago'};
+  const t=id?S.transacoes.find(x=>x.id===id):{tipo:'saida',data:today(),situacao:'pago',empresa_id:ctxDefault()};
   const cats=(tipo)=>S.categorias.filter(c=>c.tipo===tipo);
   openModalK('lanc:'+(id||'new'),id?'Editar lançamento':'Novo lançamento',`
     <div class="field"><label>Tipo</label><select id="m_tipo" onchange="lancTipoChange()">
@@ -744,7 +788,7 @@ function lancTipoChange(){
 function dueBadge(d){if(d===null)return '';const cls=d<0?'due-late':d<=5?'due-soon':'due-ok';const txt=d<0?`venceu há ${-d}d`:d===0?'hoje':`em ${d}d`;return `<span class="due-badge ${cls}">${txt}</span>`;}
 async function renderPagar(c){
   await loadBasics();
-  S.contasPagar=await dbList('contas_pagar','vencimento');
+  S.contasPagar=(await dbList('contas_pagar','vencimento')).filter(x=>!CTX||x.empresa_id===CTX);
   $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formPagar()">${sicon('plus')}Nova conta</button>`;
   const pend=S.contasPagar.filter(x=>x.status!=='paga'&&x.status!=='cancelada');
   const total=sum(pend,x=>N(x.valor));
@@ -767,7 +811,7 @@ async function renderPagar(c){
     </tbody></table>`:`<div class="empty">${sicon('pagar')}<h3>Nenhuma conta a pagar</h3><p>Cadastre contas como luz, IPVA, salários e fornecedores. Ao pagar, sai do caixa automaticamente.</p><button class="btn btn-brass" onclick="formPagar()">${sicon('plus')}Nova conta</button></div>`}</div></div>`;
 }
 function formPagar(id){
-  const x=id?S.contasPagar.find(y=>y.id===id):{vencimento:today(),recorrencia:'unica',status:'pendente'};
+  const x=id?S.contasPagar.find(y=>y.id===id):{vencimento:today(),recorrencia:'unica',status:'pendente',empresa_id:ctxDefault()};
   const cats=S.categorias.filter(c=>c.tipo==='saida');
   openModalK('pagar:'+(id||'new'),'Conta a pagar',`
     <div class="field full"><label>Descrição <span class="hint">*</span></label><input id="m_descricao" value="${esc(x.descricao||'')}" placeholder="Ex.: Energia elétrica"></div>
@@ -811,7 +855,7 @@ async function pagarConta(id){
 /* ================= CONTAS A RECEBER ================= */
 async function renderReceber(c){
   await loadBasics();
-  S.contasReceber=await dbList('contas_receber','vencimento');
+  S.contasReceber=(await dbList('contas_receber','vencimento')).filter(x=>!CTX||x.empresa_id===CTX);
   $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formReceber()">${sicon('plus')}Novo recebível</button>`;
   const pend=S.contasReceber.filter(x=>['a_receber','atrasada','prevista'].includes(x.status));
   const total=sum(pend,x=>N(x.valor));
@@ -831,16 +875,17 @@ async function renderReceber(c){
     </tbody></table>`:`<div class="empty">${sicon('receber')}<h3>Nenhum recebível</h3><p>Cadastre valores a receber (vendas, aluguéis, comissões). Ao receber, entra no caixa automaticamente.</p><button class="btn btn-brass" onclick="formReceber()">${sicon('plus')}Novo recebível</button></div>`}</div></div>`;
 }
 function formReceber(id){
-  const x=id?S.contasReceber.find(y=>y.id===id):{vencimento:today(),status:'a_receber'};
+  const x=id?S.contasReceber.find(y=>y.id===id):{vencimento:today(),status:'a_receber',empresa_id:ctxDefault()};
   openModalK('receber:'+(id||'new'),'Conta a receber',`
     <div class="field full"><label>Descrição <span class="hint">*</span></label><input id="m_descricao" value="${esc(x.descricao||'')}" placeholder="Ex.: Comissão da venda X"></div>
     <div class="field"><label>Valor</label><div class="prefix"><input id="m_valor" type="text" inputmode="decimal" class="moeda" value="${x.valor||''}"></div></div>
     <div class="field"><label>Previsão de recebimento</label><input id="m_vencimento" type="date" value="${(x.vencimento||today())}"></div>
+    <div class="field"><label>Empresa</label><select id="m_empresa_id"><option value="">—</option>${S.empresas.map(e=>`<option value="${e.id}" ${x.empresa_id===e.id?'selected':''}>${esc(e.nome)}</option>`).join('')}</select></div>
     <div class="field"><label>Cliente</label><input id="m_cliente" value="${esc(x.cliente||'')}"></div>
     <div class="field"><label>Origem</label><input id="m_origem" value="${esc(x.origem||'')}" placeholder="venda, aluguel, comissão…"></div>
   `,async()=>{
     const v=N(val('m_valor'));if(!val('m_descricao')||!v){toast('Descrição e valor são obrigatórios',1);return false;}
-    const row={descricao:val('m_descricao'),valor:v,vencimento:val('m_vencimento'),cliente:val('m_cliente'),origem:val('m_origem')};
+    const row={descricao:val('m_descricao'),valor:v,vencimento:val('m_vencimento'),cliente:val('m_cliente'),origem:val('m_origem'),empresa_id:val('m_empresa_id')||null};
     if(id)await dbUpdate('contas_receber',id,row);else await dbInsert('contas_receber',{...row,status:'a_receber'});
     toast('Recebível salvo');return true;
   });
@@ -1656,8 +1701,9 @@ async function renderRelatorios(c){
   if(!S.categorias.length)S.categorias=await dbList('categorias','nome');
   if(!S.obras.length)S.obras=await dbList('obras','nome');
   const inicio=periodoInicio(relPeriodo);
+  await loadEmpresas();
   const{data:txs}=await SB.from('transacoes').select('*').gte('data',inicio).order('data',{ascending:false});
-  const T=(txs||[]).filter(t=>t.situacao==='pago');
+  const T=(txs||[]).filter(t=>t.situacao==='pago'&&(!CTX||t.empresa_id===CTX));
   const ent=sum(T.filter(t=>t.tipo==='entrada'),t=>N(t.valor));
   const sai=sum(T.filter(t=>t.tipo==='saida'),t=>N(t.valor));
   // por categoria (saídas)
@@ -1844,6 +1890,7 @@ async function renderAuditoria(c){
 let exPeriodo='mes', exEmpresa='', exConta='';
 async function renderExtrato(c){
   await loadBasics();
+  exEmpresa=CTX; // a empresa vem da aba de contexto no topo
   S.transacoes=await dbList('transacoes','data',true); // asc p/ saldo corrido
   const inicio=periodoInicio(exPeriodo);
   // saldo inicial: base das contas (se filtrada 1 conta, só dela) + movimentos ANTES do período
@@ -1868,11 +1915,10 @@ async function renderExtrato(c){
   const totEnt=sum(noPeriodo.filter(t=>t.tipo==='entrada'),t=>N(t.valor));
   const totSai=sum(noPeriodo.filter(t=>t.tipo==='saida'),t=>N(t.valor));
 
-  $('#topbarRight').innerHTML=`<button class="btn btn-ghost" onclick="gerenciarEmpresas()">${sicon('empresa')}Empresas</button>`;
+  $('#topbarRight').innerHTML='';
   c.innerHTML=`
     <div class="toolbar">
       <div class="seg">${[['mes','Mês'],['3m','3m'],['6m','6m'],['12m','12m'],['ano','Ano'],['tudo','Tudo']].map(([k,l])=>`<button class="${exPeriodo===k?'active':''}" onclick="exPeriodo='${k}';render()">${l}</button>`).join('')}</div>
-      <select onchange="exEmpresa=this.value;render()" style="padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card)"><option value="">Todas as empresas</option>${S.empresas.map(e=>`<option value="${e.id}" ${exEmpresa===e.id?'selected':''}>${esc(e.nome)}</option>`).join('')}</select>
       <select onchange="exConta=this.value;render()" style="padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card)"><option value="">Todas as contas</option>${S.contas.map(cc=>`<option value="${cc.id}" ${exConta===cc.id?'selected':''}>${esc(cc.banco+' · '+cc.nome)}</option>`).join('')}</select>
     </div>
     <div class="kpi-grid">
@@ -1897,6 +1943,7 @@ async function renderExtrato(c){
 let orcMes=curMonth(), orcEmpresa='';
 async function renderOrcamento(c){
   await loadBasics();
+  orcEmpresa=CTX; // a empresa vem da aba de contexto no topo
   S.orcamentos=await dbList('orcamentos','created_at').catch(()=>[]);
   S.transacoes=await dbList('transacoes','data',false);
   const catsDesp=S.categorias.filter(x=>x.tipo==='saida');
@@ -1907,11 +1954,10 @@ async function renderOrcamento(c){
   // meses p/ seletor (12 últimos)
   const meses=[];{const d=new Date();for(let i=0;i<12;i++){meses.push(d.toISOString().slice(0,7));d.setMonth(d.getMonth()-1);}}
 
-  $('#topbarRight').innerHTML=`<button class="btn btn-ghost" onclick="gerenciarEmpresas()">${sicon('empresa')}Empresas</button> <button class="btn btn-brass" onclick="formOrcamento()">${sicon('plus')}Definir limite</button>`;
+  $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formOrcamento()">${sicon('plus')}Definir limite</button>`;
   c.innerHTML=`
     <div class="toolbar">
       <select onchange="orcMes=this.value;render()" style="padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card)">${meses.map(m=>`<option value="${m}" ${orcMes===m?'selected':''}>${fmtMonth(m)}</option>`).join('')}</select>
-      <select onchange="orcEmpresa=this.value;render()" style="padding:8px 11px;border:1px solid var(--line);border-radius:9px;background:var(--card)"><option value="">Todas as empresas</option>${S.empresas.map(e=>`<option value="${e.id}" ${orcEmpresa===e.id?'selected':''}>${esc(e.nome)}</option>`).join('')}</select>
     </div>
     <div class="kpi-grid">
       ${kpiCard({lbl:'Previsto (limites)',val:kmoney(totLim),ic:'orcamento',tint:'brass'})}
@@ -1949,21 +1995,20 @@ async function formOrcamento(catId){
 }
 
 /* ================= GESTÃO DE EMPRESAS ================= */
+const TIPO_EMP=[['pessoal','Pessoal'],['empresa','Empresa'],['corretagem','Corretagem']];
+function empRowHTML(e){return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px" data-id="${e.id}">
+    <input type="color" value="${esc(e.cor||'#B08A45')}" onchange="updEmpresa('${e.id}','cor',this.value)" style="width:34px;height:34px;border:none;border-radius:8px;padding:0;background:none;cursor:pointer">
+    <input value="${esc(e.nome)}" onchange="updEmpresa('${e.id}','nome',this.value)" style="flex:1;min-width:90px;padding:8px 11px;border:1px solid var(--line);border-radius:8px">
+    <input value="${esc(e.sufixo||'')}" onchange="updEmpresa('${e.id}','sufixo',this.value)" placeholder="sigla" style="width:60px;padding:8px 8px;border:1px solid var(--line);border-radius:8px;text-align:center">
+    <select onchange="updEmpresa('${e.id}','tipo',this.value)" style="padding:8px 8px;border:1px solid var(--line);border-radius:8px">${TIPO_EMP.map(([v,l])=>`<option value="${v}" ${(e.tipo||'empresa')===v?'selected':''}>${l}</option>`).join('')}</select>
+    <button class="icon-btn del" onclick="rmEmpresa('${e.id}')">${sicon('trash')}</button></div>`;}
 async function gerenciarEmpresas(){
   await loadEmpresas();
-  const linhas=()=>S.empresas.map(e=>`<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px" data-id="${e.id}">
-    <input type="color" value="${esc(e.cor||'#B08A45')}" onchange="updEmpresa('${e.id}','cor',this.value)" style="width:34px;height:34px;border:none;border-radius:8px;padding:0;background:none;cursor:pointer">
-    <input value="${esc(e.nome)}" onchange="updEmpresa('${e.id}','nome',this.value)" style="flex:1;padding:8px 11px;border:1px solid var(--line);border-radius:8px">
-    <input value="${esc(e.sufixo||'')}" onchange="updEmpresa('${e.id}','sufixo',this.value)" placeholder="sufixo" style="width:72px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;text-align:center">
-    <button class="icon-btn del" onclick="rmEmpresa('${e.id}')">${sicon('trash')}</button></div>`).join('');
-  openModal('Empresas','<div class="field full" style="grid-column:1/-1"><label>Separe seus CNPJs / origens de dinheiro</label><div id="empList">'+(linhas()||'<div class="row-sub">Nenhuma empresa.</div>')+'</div><button class="add-line" onclick="addEmpresa()">'+sicon('plus')+'Adicionar empresa</button></div>',null);
-  $('#modalSaveBtn').textContent='Fechar';$('#modalSaveBtn').onclick=()=>{closeModal();render();};
+  const lista=S.empresas.map(empRowHTML).join('')||'<div class="row-sub">Nenhuma empresa.</div>';
+  openModal('Empresas / Contextos','<div class="field full" style="grid-column:1/-1"><label>Separe por pessoa e empresa <span class="hint">(o tipo "Corretagem" mostra o módulo Imobiliário)</span></label><div id="empList">'+lista+'</div><button class="add-line" onclick="addEmpresa()">'+sicon('plus')+'Adicionar</button></div>',null);
+  $('#modalSaveBtn').textContent='Fechar';$('#modalSaveBtn').onclick=()=>{closeModal();renderCtxBar();renderNav();render();};
 }
-async function addEmpresa(){const e=await dbInsert('empresas',{nome:'Nova empresa',sufixo:'',cor:'#B08A45'});S.empresas.push(e);$('#empList').insertAdjacentHTML('beforeend',`<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px" data-id="${e.id}">
-  <input type="color" value="#B08A45" onchange="updEmpresa('${e.id}','cor',this.value)" style="width:34px;height:34px;border:none;border-radius:8px;padding:0;background:none;cursor:pointer">
-  <input value="Nova empresa" onchange="updEmpresa('${e.id}','nome',this.value)" style="flex:1;padding:8px 11px;border:1px solid var(--line);border-radius:8px">
-  <input value="" onchange="updEmpresa('${e.id}','sufixo',this.value)" placeholder="sufixo" style="width:72px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;text-align:center">
-  <button class="icon-btn del" onclick="rmEmpresa('${e.id}')">${sicon('trash')}</button></div>`);}
+async function addEmpresa(){const e=await dbInsert('empresas',{nome:'Nova empresa',sufixo:'',cor:'#B08A45',tipo:'empresa'});S.empresas.push(e);$('#empList').insertAdjacentHTML('beforeend',empRowHTML(e));}
 async function updEmpresa(id,campo,v){try{await dbUpdate('empresas',id,{[campo]:v});const e=S.empresas.find(x=>x.id===id);if(e)e[campo]=v;toast('Salvo');}catch(err){toast(traduzErro(err.message),1);}}
 async function rmEmpresa(id){if(!confirm('Remover esta empresa? Os lançamentos ficam sem empresa, mas não são apagados.'))return;try{await dbDelete('empresas',id);S.empresas=S.empresas.filter(x=>x.id!==id);const el=document.querySelector('#empList [data-id="'+id+'"]');if(el)el.remove();toast('Empresa removida');}catch(e){toast(traduzErro(e.message),1);}}
 

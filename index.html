@@ -399,11 +399,15 @@ function traduzErro(m){
 async function doLogout(){await SB.auth.signOut();}
 
 /* mostra app ou login conforme sessão */
+let appReady=false;
 SB.auth.onAuthStateChange((_e,session)=>{
-  if(session){showApp(session);}else{showLogin();}
+  if(session){ if(!appReady)showApp(session); }      // só inicializa uma vez (não reseta ao voltar pra aba)
+  else { appReady=false; showLogin(); }
 });
 function showLogin(){$('#loginScreen').classList.remove('hide');$('#appShell').classList.add('hide');}
 async function showApp(session){
+  if(appReady)return;                                 // evita re-inicializar e "pular" pro painel
+  appReady=true;
   $('#loginScreen').classList.add('hide');$('#appShell').classList.remove('hide');
   $('#whoami').textContent=session?.user?.email||'';
   await ensurePerfil(session);
@@ -948,92 +952,122 @@ function formSocio(id){
 }
 const PALETTE=['#B4884D','#1F6F63','#3E6E9E','#B5504A','#C4922E','#7A5CA8','#2E8B62'];
 
-/* ================= FORNECEDORES ================= */
-function movSaldo(movs){return sum(movs,m=>m.tipo==='compra'?N(m.valor):-N(m.valor));}
+/* ================= FORNECEDORES — compras a pagar ================= */
+// cada compra (fornecedor_mov tipo='compra') é uma conta a pagar, com vencimento e status.
 async function renderFornecedores(c){
   S.fornecedores=await dbList('fornecedores','nome');
-  const movs=await dbList('fornecedor_mov','data').catch(()=>[]);
-  const saldoDe=(id)=>movSaldo(movs.filter(m=>m.fornecedor_id===id));
-  const totalDevido=sum(S.fornecedores,f=>Math.max(0,saldoDe(f.id)));
-  $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formFornecedor()">${sicon('plus')}Novo fornecedor</button>`;
+  const mf=moneyFilter();
+  let compras=(await dbList('fornecedor_mov','vencimento').catch(()=>[])).filter(m=>m.tipo==='compra'&&(!mf||m.empresa_id===mf));
+  const abertasDe=(id)=>compras.filter(m=>m.fornecedor_id===id&&!m.pago);
+  const aPagarDe=(id)=>sum(abertasDe(id),m=>N(m.valor));
+  const proxVencDe=(id)=>{const vs=abertasDe(id).map(m=>m.vencimento).filter(Boolean).sort();return vs[0]||null;};
+  const totalAPagar=sum(compras.filter(m=>!m.pago),m=>N(m.valor));
+  const vencendo7=compras.filter(m=>!m.pago&&m.vencimento&&daysUntil(m.vencimento)!==null&&daysUntil(m.vencimento)<=7).length;
+  const atrasadas=compras.filter(m=>!m.pago&&m.vencimento&&daysUntil(m.vencimento)<0).length;
+  const comDivida=S.fornecedores.filter(f=>aPagarDe(f.id)>0.001);
+  const ordenados=[...S.fornecedores].sort((a,b)=>(aPagarDe(b.id))-(aPagarDe(a.id)));
+  $('#topbarRight').innerHTML=`<button class="btn btn-ghost" onclick="gerenciarFornecedores()">${sicon('fornecedores')}Cadastro</button> <button class="btn btn-brass" onclick="novaCompraForn()">${sicon('plus')}Nova compra</button>`;
   c.innerHTML=`
-    ${S.fornecedores.length?`<div class="kpi-grid">
-      ${kpiCard({lbl:'Fornecedores',val:S.fornecedores.length,ic:'fornecedores',tint:'brass'})}
-      ${kpiCard({lbl:'Total a pagar (saldo devedor)',val:kmoney(totalDevido),ic:'pagar',tint:totalDevido>0?'red':'green'})}
-    </div>`:''}
-    <div class="card"><div class="tbl-wrap">${S.fornecedores.length?`<table class="data"><thead><tr><th>Fornecedor</th><th>Categoria</th><th class="num">Saldo devedor</th><th></th></tr></thead><tbody>
-    ${S.fornecedores.map(f=>{const sd=saldoDe(f.id);return `<tr style="cursor:pointer" onclick="go('fornecedorDetail','${f.id}')">
-      <td><div class="row-title">${esc(f.nome)}</div><div class="row-sub">${esc(f.telefone||'')}</div></td>
-      <td class="row-sub">${esc(f.categoria||'—')}</td>
-      <td class="num"><b class="${sd>0?'neg':''}">${sd>0?money(sd):money(0)}</b></td>
-      <td><div class="t-actions"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();go('fornecedorDetail','${f.id}')">Abrir</button><button class="icon-btn" onclick='event.stopPropagation();formFornecedor(${JSON.stringify(f.id)})'>${sicon('edit')}</button><button class="icon-btn del" onclick='event.stopPropagation();delReg("fornecedores","${f.id}","Fornecedor")'>${sicon('trash')}</button></div></td></tr>`;}).join('')}
-  </tbody></table>`:`<div class="empty">${sicon('fornecedores')}<h3>Nenhum fornecedor</h3><p>Cadastre lojas de material e prestadores. Cada um tem uma conta-corrente: compras aumentam a dívida, pagamentos e descontos reduzem.</p><button class="btn btn-brass" onclick="formFornecedor()">${sicon('plus')}Novo fornecedor</button></div>`}</div></div>`;
+    <div class="kpi-grid">
+      ${kpiCard({lbl:'Total a pagar',val:kmoney(totalAPagar),sub:comDivida.length+' fornecedor(es)',ic:'pagar',tint:totalAPagar>0?'red':'green'})}
+      ${kpiCard({lbl:'Vencendo em 7 dias',val:vencendo7,ic:'clock',tint:'amber'})}
+      ${kpiCard({lbl:'Em atraso',val:atrasadas,ic:'alert',tint:atrasadas?'red':'green'})}
+    </div>
+    <div class="card"><div class="card-h"><h3>Quanto deve a cada fornecedor</h3><span class="sub">clique para ver as compras</span></div>
+    <div class="tbl-wrap">${S.fornecedores.length?`<table class="data"><thead><tr><th>Fornecedor</th><th class="num">A pagar</th><th>Próx. vencimento</th><th></th></tr></thead><tbody>
+    ${ordenados.map(f=>{const ap=aPagarDe(f.id);const pv=proxVencDe(f.id);const d=pv?daysUntil(pv):null;return `<tr style="cursor:pointer" onclick="go('fornecedorDetail','${f.id}')">
+      <td><div class="row-title">${esc(f.nome)}</div><div class="row-sub">${esc(f.categoria||'')}</div></td>
+      <td class="num"><b class="${ap>0?'neg':''}">${ap>0?money(ap):money(0)}</b></td>
+      <td>${pv?`${fmtDate(pv)} ${dueBadge(d)}`:'<span class="row-sub">—</span>'}</td>
+      <td><div class="t-actions"><button class="btn btn-ghost btn-sm" onclick="event.stopPropagation();go('fornecedorDetail','${f.id}')">Abrir</button></div></td></tr>`;}).join('')}
+  </tbody></table>`:`<div class="empty">${sicon('fornecedores')}<h3>Nenhum fornecedor</h3><p>Cadastre seus fornecedores e lance as compras com vencimento. O sistema mostra quanto você deve a cada um, o que vence e o que está atrasado.</p><button class="btn btn-brass" onclick="gerenciarFornecedores()">${sicon('plus')}Cadastrar fornecedor</button></div>`}</div></div>`;
 }
-/* ---- conta-corrente do fornecedor ---- */
 async function renderFornecedorDetail(c){
   const f=await dbOne('fornecedores',detailForn).catch(()=>null);
   if(!f){go('fornecedores');return;}
   await loadEmpresas();if(!S.contas.length)await reloadContas();if(!S.obras.length)S.obras=await dbList('obras','nome').catch(()=>[]);
-  const movs=(await dbWhere('fornecedor_mov','fornecedor_id',f.id,'data'));
-  const totCompra=sum(movs.filter(m=>m.tipo==='compra'),m=>N(m.valor));
-  const totPago=sum(movs.filter(m=>m.tipo==='pagamento'),m=>N(m.valor));
-  const totDesc=sum(movs.filter(m=>m.tipo==='desconto'),m=>N(m.valor));
-  const saldo=totCompra-totPago-totDesc;
-  // saldo corrido
-  let run=0;const linhas=movs.map(m=>{run+=m.tipo==='compra'?N(m.valor):-N(m.valor);return {m,run};});
+  const compras=(await dbWhere('fornecedor_mov','fornecedor_id',f.id,'vencimento')).filter(m=>m.tipo==='compra');
+  const totCompra=sum(compras,m=>N(m.valor));
+  const totPago=sum(compras.filter(m=>m.pago),m=>N(m.valor));
+  const aPagar=sum(compras.filter(m=>!m.pago),m=>N(m.valor));
+  const atrasadas=compras.filter(m=>!m.pago&&m.vencimento&&daysUntil(m.vencimento)<0);
   $('#topbarRight').innerHTML='';
   c.innerHTML=`
-    <button class="btn btn-ghost btn-sm" onclick="go('fornecedores')" style="margin-bottom:14px">‹ Voltar para fornecedores</button>
+    <button class="btn btn-ghost btn-sm" onclick="go('fornecedores')" style="margin-bottom:14px">‹ Voltar</button>
     <div style="display:flex;align-items:flex-start;gap:15px;margin-bottom:16px;flex-wrap:wrap">
       <div class="kicon tint-brass" style="width:48px;height:48px;border-radius:13px">${sicon('fornecedores')}</div>
       <div style="flex:1;min-width:0"><h2 style="font-size:21px">${esc(f.nome)}</h2><div class="row-sub">${esc(f.categoria||'')}${f.telefone?' · '+esc(f.telefone):''}</div></div>
       <button class="btn btn-ghost btn-sm" onclick='formFornecedor("${f.id}")'>${sicon('edit')}Editar</button>
     </div>
     <div class="kpi-grid">
+      ${kpiCard({lbl:'A pagar',val:kmoney(aPagar),sub:atrasadas.length?atrasadas.length+' atrasada(s)':'em dia',ic:'pagar',tint:aPagar>0?'red':'green'})}
       ${kpiCard({lbl:'Total comprado',val:kmoney(totCompra),ic:'down',tint:'brass'})}
-      ${kpiCard({lbl:'Pago',val:kmoney(totPago),ic:'check',tint:'green'})}
-      ${kpiCard({lbl:'Descontos',val:kmoney(totDesc),ic:'orcamento',tint:'blue'})}
-      ${kpiCard({lbl:'Saldo devedor',val:kmoney(Math.max(0,saldo)),sub:saldo<=0?'em dia':'a pagar',ic:'pagar',tint:saldo>0?'red':'green'})}
+      ${kpiCard({lbl:'Já pago',val:kmoney(totPago),ic:'check',tint:'green'})}
     </div>
-    <div class="toolbar">
-      <button class="btn btn-brass btn-sm" onclick="formMovForn('${f.id}','compra')">${sicon('plus')}Compra (fiado)</button>
-      <button class="btn btn-ghost btn-sm" onclick="formMovForn('${f.id}','pagamento')">${sicon('check')}Registrar pagamento</button>
-      <button class="btn btn-ghost btn-sm" onclick="formMovForn('${f.id}','desconto')">Desconto</button>
-    </div>
-    <div class="card"><div class="card-h"><h3>Extrato (conta-corrente)</h3><span class="sub">compra aumenta a dívida · pagamento e desconto reduzem</span></div>
-    <div class="tbl-wrap">${linhas.length?`<table class="data"><thead><tr><th>Data</th><th>Descrição</th><th class="num">Compra</th><th class="num">Pagamento</th><th class="num">Desconto</th><th class="num">Saldo</th><th></th></tr></thead><tbody>
-      ${linhas.slice().reverse().map(({m,run})=>`<tr><td class="mono" style="font-size:12.5px">${fmtDate(m.data)}</td>
-        <td><div class="row-title">${esc(m.descricao||({compra:'Compra',pagamento:'Pagamento',desconto:'Desconto'}[m.tipo]))}</div>${m.obra_id?`<div class="row-sub">${esc((S.obras.find(o=>o.id===m.obra_id)||{}).nome||'')}</div>`:''}</td>
-        <td class="num">${m.tipo==='compra'?money(m.valor):''}</td>
-        <td class="num pos">${m.tipo==='pagamento'?money(m.valor):''}</td>
-        <td class="num">${m.tipo==='desconto'?money(m.valor):''}</td>
-        <td class="num"><b class="${run>0?'neg':''}">${money(run)}</b></td>
-        <td><div class="t-actions"><button class="icon-btn del" onclick='delMovForn("${m.id}")'>${sicon('trash')}</button></div></td></tr>`).join('')}
-    </tbody></table>`:`<div class="empty">${sicon('fornecedores')}<h3>Sem movimentos</h3><p>Lance a primeira compra (fiado) ou um pagamento para começar o extrato.</p><button class="btn btn-brass" onclick="formMovForn('${f.id}','compra')">${sicon('plus')}Lançar compra</button></div>`}</div></div>`;
+    <div class="toolbar"><button class="btn btn-brass btn-sm" onclick="novaCompraForn('${f.id}')">${sicon('plus')}Nova compra</button></div>
+    <div class="card"><div class="card-h"><h3>Compras</h3><span class="sub">o que você comprou e precisa pagar</span></div>
+    <div class="tbl-wrap">${compras.length?`<table class="data"><thead><tr><th>Vencimento</th><th>Descrição</th><th class="num">Valor</th><th>Status</th><th></th><th></th></tr></thead><tbody>
+      ${compras.slice().sort((a,b)=>(a.pago-b.pago)||((a.vencimento||'').localeCompare(b.vencimento||''))).map(m=>{const d=m.vencimento?daysUntil(m.vencimento):null;return `<tr>
+        <td style="width:110px"><div class="mono" style="font-size:12.5px">${fmtDate(m.vencimento||m.data)}</div>${m.pago?'':dueBadge(d)}</td>
+        <td><div class="row-title">${esc(m.descricao||'Compra')}</div>${m.obra_id?`<div class="row-sub">${esc((S.obras.find(o=>o.id===m.obra_id)||{}).nome||'')}</div>`:''}</td>
+        <td class="num"><b>${money(m.valor)}</b></td>
+        <td>${m.pago?`<span class="pill pill-green">pago ${m.pago_em?fmtDate(m.pago_em):''}</span>`:`<span class="pill pill-amber">em aberto</span>`}</td>
+        <td style="width:1%;white-space:nowrap">${m.pago?'':`<button class="btn btn-ghost btn-sm" onclick="pagarCompraForn('${m.id}')">${sicon('check')}Pagar</button>`}</td>
+        <td><div class="t-actions"><button class="icon-btn" onclick='editCompraForn("${m.id}")'>${sicon('edit')}</button><button class="icon-btn del" onclick='delCompraForn("${m.id}")'>${sicon('trash')}</button></div></td></tr>`;}).join('')}
+    </tbody></table>`:`<div class="empty">${sicon('fornecedores')}<h3>Nenhuma compra</h3><p>Lance a primeira compra com o vencimento. Ela entra em "a pagar" e avisa quando está perto de vencer.</p><button class="btn btn-brass" onclick="novaCompraForn('${f.id}')">${sicon('plus')}Nova compra</button></div>`}</div></div>`;
 }
-function formMovForn(fornId,tipo){
-  const titulos={compra:'Compra (fiado)',pagamento:'Registrar pagamento',desconto:'Desconto'};
-  const contaOpts=S.contas.map(cc=>`<option value="${cc.id}">${esc(cc.banco+' · '+cc.nome)}</option>`).join('');
-  const obraOpts='<option value="">— nenhuma —</option>'+S.obras.map(o=>`<option value="${o.id}">${esc(o.nome)}</option>`).join('');
-  openModalK('movforn:'+fornId+':'+tipo,titulos[tipo],`
-    <div class="field full"><label>Descrição</label><input id="m_descricao" placeholder="${tipo==='compra'?'Ex.: Pedido de material':tipo==='pagamento'?'Ex.: Acerto parcial':'Ex.: Desconto negociado'}"></div>
-    <div class="field"><label>Valor <span class="hint">*</span></label><div class="prefix"><input id="m_valor" type="text" inputmode="decimal" class="moeda"></div></div>
-    <div class="field"><label>Data</label><input id="m_data" type="date" value="${today()}"></div>
-    ${tipo==='compra'?`<div class="field"><label>Obra <span class="hint">(opcional)</span></label><select id="m_obra_id">${obraOpts}</select></div>`:''}
-    ${tipo==='pagamento'?`<div class="field full"><label>Sai de qual conta? <span class="hint">(gera saída no caixa)</span></label><select id="m_conta_id"><option value="">— não lançar no caixa —</option>${contaOpts}</select></div>`:''}
+async function novaCompraForn(fornId){
+  S.fornecedores=await dbList('fornecedores','nome');
+  if(!S.fornecedores.length){toast('Cadastre um fornecedor primeiro',1);await gerenciarFornecedores();return;}
+  if(!S.obras.length)S.obras=await dbList('obras','nome').catch(()=>[]);
+  await _formCompraForn({fornecedor_id:fornId||S.fornecedores[0].id,data:today(),vencimento:today()});
+}
+async function editCompraForn(id){const m=await dbOne('fornecedor_mov',id);if(!S.fornecedores.length)S.fornecedores=await dbList('fornecedores','nome');if(!S.obras.length)S.obras=await dbList('obras','nome').catch(()=>[]);await _formCompraForn(m,id);}
+async function _formCompraForn(x,id){
+  const fornOpts=S.fornecedores.map(f=>`<option value="${f.id}" ${x.fornecedor_id===f.id?'selected':''}>${esc(f.nome)}</option>`).join('');
+  const obraOpts='<option value="">— nenhuma —</option>'+S.obras.map(o=>`<option value="${o.id}" ${x.obra_id===o.id?'selected':''}>${esc(o.nome)}</option>`).join('');
+  openModalK('compraforn:'+(id||'new'),id?'Editar compra':'Nova compra',`
+    <div class="field"><label>Fornecedor <span class="hint">*</span></label><select id="m_fornecedor_id">${fornOpts}</select></div>
+    <div class="field"><label>Valor <span class="hint">*</span></label><div class="prefix"><input id="m_valor" type="text" inputmode="decimal" class="moeda" value="${x.valor||''}"></div></div>
+    <div class="field full"><label>Descrição</label><input id="m_descricao" value="${esc(x.descricao||'')}" placeholder="Ex.: Pedido de porcelanato"></div>
+    <div class="field"><label>Vencimento</label><input id="m_vencimento" type="date" value="${(x.vencimento||today()).slice(0,10)}"></div>
+    <div class="field"><label>Data da compra</label><input id="m_data" type="date" value="${(x.data||today()).slice(0,10)}"></div>
+    <div class="field full"><label>Obra <span class="hint">(opcional)</span></label><select id="m_obra_id">${obraOpts}</select></div>
   `,async()=>{
-    const v=N(val('m_valor'));if(!v){toast('Informe o valor',1);return false;}
-    const row={fornecedor_id:fornId,tipo,data:val('m_data'),descricao:val('m_descricao'),valor:v,empresa_id:ctxDefault()};
-    if(tipo==='compra')row.obra_id=val('m_obra_id')||null;
-    if(tipo==='pagamento'&&val('m_conta_id')){
-      const tx=await dbInsert('transacoes',{tipo:'saida',valor:v,data:val('m_data'),descricao:'Pagto fornecedor: '+(val('m_descricao')||fornNome(fornId)),conta_id:val('m_conta_id'),empresa_id:ctxDefault(),situacao:'pago',forma:'transferencia',origem_tipo:'fornecedor',origem_id:fornId});
-      row.transacao_id=tx.id;
-    }
-    await dbInsert('fornecedor_mov',row);
-    toast(titulos[tipo]+' lançado');return true;
+    const v=N(val('m_valor'));if(!val('m_fornecedor_id')||!v){toast('Fornecedor e valor são obrigatórios',1);return false;}
+    const row={fornecedor_id:val('m_fornecedor_id'),tipo:'compra',valor:v,descricao:val('m_descricao'),vencimento:val('m_vencimento')||null,data:val('m_data')||today(),obra_id:val('m_obra_id')||null,empresa_id:ctxDefault()};
+    if(id)await dbUpdate('fornecedor_mov',id,row);else await dbInsert('fornecedor_mov',row);
+    toast('Compra salva');return true;
   });
 }
-async function delMovForn(id){if(!confirm('Excluir este movimento? Se gerou saída no caixa, remova o lançamento no Financeiro.'))return;await dbDelete('fornecedor_mov',id);toast('Movimento excluído');render();}
+async function pagarCompraForn(id){
+  const m=await dbOne('fornecedor_mov',id);if(!m)return;
+  if(!S.contas.length)await reloadContas();
+  openModal('Pagar compra',`
+    <div class="field full"><label>${esc(m.descricao||'Compra')} — <b class="mono">${money(m.valor)}</b></label></div>
+    <div class="field full"><label>Pagar com qual conta? <span class="hint">(gera saída no caixa)</span></label><select id="m_conta"><option value="">— só marcar como paga —</option>${S.contas.map(c=>`<option value="${c.id}">${esc(c.banco+' · '+c.nome)}</option>`).join('')}</select></div>
+    <div class="field full"><label>Data do pagamento</label><input id="m_data" type="date" value="${today()}"></div>
+  `,async()=>{
+    const conta=val('m_conta');const dt=val('m_data')||today();let txId=m.transacao_id||null;
+    if(conta){const tx=await dbInsert('transacoes',{tipo:'saida',valor:N(m.valor),data:dt,descricao:'Pagto fornecedor: '+(m.descricao||fornNome(m.fornecedor_id)),conta_id:conta,empresa_id:m.empresa_id||ctxDefault(),obra_id:m.obra_id||null,situacao:'pago',forma:'transferencia',origem_tipo:'fornecedor',origem_id:m.fornecedor_id});txId=tx.id;}
+    await dbUpdate('fornecedor_mov',id,{pago:true,pago_em:dt,transacao_id:txId});
+    toast('Compra paga');return true;
+  });
+}
+async function delCompraForn(id){if(!confirm('Excluir esta compra? Se já gerou saída no caixa, remova o lançamento no Financeiro.'))return;await dbDelete('fornecedor_mov',id);toast('Compra excluída');render();}
+/* cadastro leve de fornecedores (secundário) */
+async function gerenciarFornecedores(){
+  S.fornecedores=await dbList('fornecedores','nome');
+  const row=(f)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px" data-id="${f.id}">
+    <input value="${esc(f.nome)}" onchange="updFornecedor('${f.id}','nome',this.value)" style="flex:1;padding:8px 11px;border:1px solid var(--line);border-radius:8px">
+    <input value="${esc(f.categoria||'')}" onchange="updFornecedor('${f.id}','categoria',this.value)" placeholder="categoria" style="width:130px;padding:8px 10px;border:1px solid var(--line);border-radius:8px">
+    <button class="icon-btn del" onclick="rmFornecedor('${f.id}')">${sicon('trash')}</button></div>`;
+  openModal('Fornecedores','<div class="field full" style="grid-column:1/-1"><label>Seus fornecedores</label><div id="fornList">'+(S.fornecedores.map(row).join('')||'<div class="row-sub">Nenhum fornecedor.</div>')+'</div><button class="add-line" onclick="addFornecedorQuick()">'+sicon('plus')+'Adicionar fornecedor</button></div>',null);
+  $('#modalSaveBtn').textContent='Fechar';$('#modalSaveBtn').onclick=()=>{closeModal();render();};
+}
+async function addFornecedorQuick(){const f=await dbInsert('fornecedores',{nome:'Novo fornecedor'});S.fornecedores.push(f);const el=$('#fornList');if(el.querySelector('.row-sub'))el.innerHTML='';el.insertAdjacentHTML('beforeend',`<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px" data-id="${f.id}"><input value="Novo fornecedor" onchange="updFornecedor('${f.id}','nome',this.value)" style="flex:1;padding:8px 11px;border:1px solid var(--line);border-radius:8px"><input placeholder="categoria" onchange="updFornecedor('${f.id}','categoria',this.value)" style="width:130px;padding:8px 10px;border:1px solid var(--line);border-radius:8px"><button class="icon-btn del" onclick="rmFornecedor('${f.id}')">${sicon('trash')}</button></div>`);}
+async function updFornecedor(id,campo,v){try{await dbUpdate('fornecedores',id,{[campo]:v});const o=S.fornecedores.find(x=>x.id===id);if(o)o[campo]=v;toast('Salvo');}catch(e){toast(traduzErro(e.message),1);}}
+async function rmFornecedor(id){if(!confirm('Remover este fornecedor? As compras dele também serão removidas.'))return;try{await dbDelete('fornecedores',id);S.fornecedores=S.fornecedores.filter(x=>x.id!==id);const el=document.querySelector('#fornList [data-id="'+id+'"]');if(el)el.remove();toast('Removido');}catch(e){toast(traduzErro(e.message),1);}}
 function formFornecedor(id){
   const x=id?S.fornecedores.find(y=>y.id===id):{};
   openModalK('fornecedor:'+(id||'new'),'Fornecedor',`
@@ -1052,7 +1086,14 @@ function formFornecedor(id){
 }
 
 /* ================= COMISSÃO DAS VENDEDORAS ================= */
-const comVendTotal=(c)=>N(c.venda)*N(c.percentual)/100 + N(c.bonus_meta)+N(c.alimentacao)+N(c.transporte)+N(c.desempenho)+N(c.pontualidade);
+/* Regra de comissão (vendedora): a cada R$ BLOCO vendidos → R$ VALOR_BLOCO;
+   o que sobra (quebrado) paga PCT% em dinheiro. */
+const COM_BLOCO=20000, COM_VALOR_BLOCO=300, COM_PCT=1.5;
+function comVendCalc(venda,pct){venda=N(venda);const blocos=Math.floor(venda/COM_BLOCO);const meta=blocos*COM_VALOR_BLOCO;const quebrado=venda-blocos*COM_BLOCO;const dinheiro=quebrado*(N(pct)||COM_PCT)/100;return {blocos,meta,quebrado,dinheiro,total:meta+dinheiro};}
+const CARGOS=['Vendedora','Administrativo','Produção'];
+const vendCargo=(id)=>{const v=S.vendedoras.find(x=>x.id===id);return (v&&v.cargo)||'Vendedora';};
+const ehVendedora=(id)=>vendCargo(id)==='Vendedora';
+const comVendTotal=(c)=>{const extra=N(c.bonus_meta);if(ehVendedora(c.vendedora_id))return comVendCalc(c.venda,c.percentual).total+extra;return extra;};
 const vendNome=(id)=>{const v=S.vendedoras.find(x=>x.id===id);return v?v.nome:'—';};
 let vendMes=curMonth();
 async function renderVendedoras(c){
@@ -1072,73 +1113,82 @@ async function renderVendedoras(c){
       ${kpiCard({lbl:'A pagar',val:kmoney(totalMes-pagoMes),ic:'pagar',tint:(totalMes-pagoMes)>0?'amber':'green'})}
       ${kpiCard({lbl:'Pago',val:kmoney(pagoMes),ic:'check',tint:'green'})}
     </div>
-    <div class="card"><div class="card-h"><h3>Comissões · ${fmtMonth(vendMes)}</h3><span class="sub">venda × 1,5% + adicionais, dividido por forma de pagamento</span></div>
-    <div class="tbl-wrap">${doMes.length?`<table class="data"><thead><tr><th>Funcionário</th><th class="num">Venda</th><th class="num">Base 1,5%</th><th class="num">Adicionais</th><th class="num">Total</th><th>Formas (iFood/din.)</th><th>Status</th><th></th></tr></thead><tbody>
-      ${doMes.map(x=>{const base=N(x.venda)*N(x.percentual)/100;const adic=N(x.bonus_meta)+N(x.alimentacao)+N(x.transporte)+N(x.desempenho)+N(x.pontualidade);const tot=base+adic;const formas=N(x.pago_ifood)+N(x.pago_dinheiro);const bate=Math.abs(formas-tot)<0.01;
+    <div class="card"><div class="card-h"><h3>Pagamentos · ${fmtMonth(vendMes)}</h3><span class="sub">vendedora: a cada ${money0(COM_BLOCO)} = ${money0(COM_VALOR_BLOCO)} + ${COM_PCT}% do que sobra em dinheiro</span></div>
+    <div class="tbl-wrap">${doMes.length?`<table class="data"><thead><tr><th>Funcionário</th><th>Cargo</th><th class="num">Venda</th><th class="num">Comissão (meta)</th><th class="num">Dinheiro (${COM_PCT}%)</th><th class="num">Adicionais</th><th class="num">Total</th><th>Status</th><th></th></tr></thead><tbody>
+      ${doMes.map(x=>{const vend=ehVendedora(x.vendedora_id);const k=vend?comVendCalc(x.venda,x.percentual):{meta:0,dinheiro:0};const extra=N(x.bonus_meta);const tot=k.meta+k.dinheiro+extra;
         return `<tr><td class="row-title">${esc(vendNome(x.vendedora_id))}</td>
-        <td class="num">${money0(x.venda)}</td>
-        <td class="num">${money(base)}</td>
-        <td class="num">${money(adic)}</td>
+        <td class="row-sub">${esc(vendCargo(x.vendedora_id))}</td>
+        <td class="num">${vend?money0(x.venda):'—'}</td>
+        <td class="num">${vend?money(k.meta):'—'}</td>
+        <td class="num">${vend?money(k.dinheiro):'—'}</td>
+        <td class="num">${extra?money(extra):'—'}</td>
         <td class="num"><b>${money(tot)}</b></td>
-        <td class="row-sub">${money0(x.pago_ifood)} / ${money0(x.pago_dinheiro)} ${(formas>0&&!bate)?'<span class="pill pill-amber" title="iFood + dinheiro não bate com o total">≠</span>':''}</td>
         <td>${x.pago?'<span class="pill pill-green">pago</span>':`<button class="btn btn-ghost btn-sm" onclick="pagarComissaoVend('${x.id}')">Pagar</button>`}</td>
-        <td><div class="t-actions"><button class="icon-btn" onclick='formComissaoVend("${x.id}")'>${sicon('edit')}</button><button class="icon-btn del" onclick='delReg("comissoes_vendedoras","${x.id}","Comissão")'>${sicon('trash')}</button></div></td></tr>`;}).join('')}
-    </tbody></table>`:`<div class="empty">${sicon('funcionarios')}<h3>Nenhuma comissão neste mês</h3><p>Cadastre os funcionários e lance a comissão de cada um. O total (venda × 1,5% + bônus, alimentação, transporte, desempenho e pontualidade) é calculado sozinho e dividido entre iFood e dinheiro.</p><button class="btn btn-brass" onclick="formComissaoVend()">${sicon('plus')}Lançar comissão</button></div>`}</div></div>`;
+        <td><div class="t-actions"><button class="icon-btn" onclick='formComissaoVend("${x.id}")'>${sicon('edit')}</button><button class="icon-btn del" onclick='delReg("comissoes_vendedoras","${x.id}","Lançamento")'>${sicon('trash')}</button></div></td></tr>`;}).join('')}
+    </tbody></table>`:`<div class="empty">${sicon('funcionarios')}<h3>Nada neste mês</h3><p>Cadastre os funcionários (com o cargo) e lance o pagamento de cada um. Para vendedora, o sistema calcula a comissão sozinho a partir da venda.</p><button class="btn btn-brass" onclick="formComissaoVend()">${sicon('plus')}Lançar</button></div>`}</div></div>`;
 }
+function vendRowHTML(v){return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px" data-id="${v.id}">
+    <input value="${esc(v.nome)}" onchange="updVendedora('${v.id}','nome',this.value)" style="flex:1;padding:8px 11px;border:1px solid var(--line);border-radius:8px">
+    <select onchange="updVendedora('${v.id}','cargo',this.value)" style="width:150px;padding:8px 10px;border:1px solid var(--line);border-radius:8px">${CARGOS.map(cg=>`<option ${(v.cargo||'Vendedora')===cg?'selected':''}>${cg}</option>`).join('')}</select>
+    <button class="icon-btn del" onclick="rmVendedora('${v.id}')">${sicon('trash')}</button></div>`;}
 async function gerenciarVendedoras(){
   S.vendedoras=await dbList('vendedoras','nome').catch(()=>[]);
-  const row=(v)=>`<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px" data-id="${v.id}">
-    <input value="${esc(v.nome)}" onchange="updVendedora('${v.id}','nome',this.value)" style="flex:1;padding:8px 11px;border:1px solid var(--line);border-radius:8px">
-    <input value="${esc(v.telefone||'')}" onchange="updVendedora('${v.id}','telefone',this.value)" placeholder="telefone" style="width:130px;padding:8px 10px;border:1px solid var(--line);border-radius:8px">
-    <button class="icon-btn del" onclick="rmVendedora('${v.id}')">${sicon('trash')}</button></div>`;
-  openModal('Funcionários','<div class="field full" style="grid-column:1/-1"><label>Quem recebe comissão</label><div id="vendList">'+(S.vendedoras.map(row).join('')||'<div class="row-sub">Nenhum funcionário.</div>')+'</div><button class="add-line" onclick="addVendedora()">'+sicon('plus')+'Adicionar funcionário</button></div>',null);
+  openModal('Funcionários','<div class="field full" style="grid-column:1/-1"><label>Nome e cargo <span class="hint">(vendedora · administrativo · produção)</span></label><div id="vendList">'+(S.vendedoras.map(vendRowHTML).join('')||'<div class="row-sub">Nenhum funcionário.</div>')+'</div><button class="add-line" onclick="addVendedora()">'+sicon('plus')+'Adicionar funcionário</button></div>',null);
   $('#modalSaveBtn').textContent='Fechar';$('#modalSaveBtn').onclick=()=>{closeModal();render();};
 }
-async function addVendedora(){const v=await dbInsert('vendedoras',{nome:'Novo funcionário'});S.vendedoras.push(v);$('#vendList').insertAdjacentHTML('beforeend',`<div style="display:flex;align-items:center;gap:8px;margin-bottom:9px" data-id="${v.id}"><input value="Novo funcionário" onchange="updVendedora('${v.id}','nome',this.value)" style="flex:1;padding:8px 11px;border:1px solid var(--line);border-radius:8px"><input placeholder="telefone" onchange="updVendedora('${v.id}','telefone',this.value)" style="width:130px;padding:8px 10px;border:1px solid var(--line);border-radius:8px"><button class="icon-btn del" onclick="rmVendedora('${v.id}')">${sicon('trash')}</button></div>`);}
+async function addVendedora(){const v=await dbInsert('vendedoras',{nome:'Novo funcionário',cargo:'Vendedora'});S.vendedoras.push(v);const el=$('#vendList');if(el.querySelector('.row-sub'))el.innerHTML='';el.insertAdjacentHTML('beforeend',vendRowHTML(v));}
 async function updVendedora(id,campo,v){try{await dbUpdate('vendedoras',id,{[campo]:v});const o=S.vendedoras.find(x=>x.id===id);if(o)o[campo]=v;toast('Salvo');}catch(e){toast(traduzErro(e.message),1);}}
 async function rmVendedora(id){if(!confirm('Remover este funcionário?'))return;try{await dbDelete('vendedoras',id);S.vendedoras=S.vendedoras.filter(x=>x.id!==id);const el=document.querySelector('#vendList [data-id="'+id+'"]');if(el)el.remove();toast('Removido');}catch(e){toast(traduzErro(e.message),1);}}
-/* soma ao vivo no formulário */
+/* soma ao vivo no formulário (depende do cargo) */
 function recalcComissao(){
-  const g=id=>{const e=$('#'+id);return e?parseMoeda(e.value):0;};
-  const venda=g('m_venda'), pct=N($('#m_percentual')?$('#m_percentual').value:0);
-  const base=venda*pct/100;
-  const adic=g('m_bonus_meta')+g('m_alimentacao')+g('m_transporte')+g('m_desempenho')+g('m_pontualidade');
-  const tot=base+adic;
-  const formas=g('m_pago_ifood')+g('m_pago_dinheiro');
   const el=$('#comTotal');if(!el)return;
-  let formasTxt='';
-  if(formas>0)formasTxt=Math.abs(formas-tot)<0.01?` · <span style="color:var(--green)">formas conferem ✓</span>`:` · <span style="color:var(--red)">iFood+dinheiro = ${money(formas)} (faltam ${money(tot-formas)})</span>`;
-  el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px"><span style="font-size:12.5px;color:var(--muted)">Base 1,5%: <b style="color:var(--ink)">${money(base)}</b> + Adicionais: <b style="color:var(--ink)">${money(adic)}</b></span><span style="font-size:16px">Total: <b>${money(tot)}</b></span></div><div style="font-size:12px;margin-top:3px">${formasTxt||'<span style="color:var(--muted)">divida o total entre iFood e dinheiro abaixo</span>'}</div>`;
+  const sel=$('#m_vendedora_id');const vid=sel?sel.value:'';
+  const vend=ehVendedora(vid);
+  const extra=(()=>{const e=$('#m_bonus_meta');return e?parseMoeda(e.value):0;})();
+  // mostra/esconde a parte de venda conforme cargo
+  const vb=$('#vendaBlock');if(vb)vb.style.display=vend?'contents':'none';
+  if(vend){
+    const venda=(()=>{const e=$('#m_venda');return e?parseMoeda(e.value):0;})();
+    const pct=N($('#m_percentual')?$('#m_percentual').value:COM_PCT);
+    const k=comVendCalc(venda,pct);
+    const tot=k.meta+k.dinheiro+extra;
+    el.innerHTML=`<div style="font-size:11.5px;color:var(--brass-l);text-transform:uppercase;letter-spacing:.6px;font-weight:700;margin-bottom:6px">Como recebe</div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px"><span>Comissão (meta) — ${k.blocos}× ${money0(COM_VALOR_BLOCO)}</span><b>${money(k.meta)}</b></div>
+      <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px"><span>Dinheiro — ${COM_PCT}% de ${money0(k.quebrado)}</span><b>${money(k.dinheiro)}</b></div>
+      ${extra?`<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:2px"><span>Adicionais</span><b>${money(extra)}</b></div>`:''}
+      <div style="display:flex;justify-content:space-between;border-top:1px solid #3a3228;margin-top:6px;padding-top:6px;font-size:16px"><span>Total a receber</span><b>${money(tot)}</b></div>`;
+  }else{
+    el.innerHTML=`<div style="display:flex;justify-content:space-between;align-items:center"><span style="font-size:13px">Total a receber</span><b style="font-size:17px">${money(extra)}</b></div>`;
+  }
 }
-function wireRecalc(){['m_venda','m_percentual','m_bonus_meta','m_alimentacao','m_transporte','m_desempenho','m_pontualidade','m_pago_ifood','m_pago_dinheiro'].forEach(id=>{const e=$('#'+id);if(e)e.addEventListener('input',recalcComissao);});recalcComissao();}
+function wireRecalc(){['m_vendedora_id','m_venda','m_percentual','m_bonus_meta'].forEach(id=>{const e=$('#'+id);if(e){e.addEventListener('input',recalcComissao);e.addEventListener('change',recalcComissao);}});recalcComissao();}
 async function formComissaoVend(id){
   S.vendedoras=await dbList('vendedoras','nome').catch(()=>[]);
   if(!S.vendedoras.length){toast('Cadastre um funcionário primeiro',1);await gerenciarVendedoras();return;}
-  let x=id?await dbOne('comissoes_vendedoras',id):{competencia:vendMes+'-01',percentual:1.5,venda:0};
-  const vendOpts=S.vendedoras.map(v=>`<option value="${v.id}" ${x.vendedora_id===v.id?'selected':''}>${esc(v.nome)}</option>`).join('');
+  let x=id?await dbOne('comissoes_vendedoras',id):{competencia:vendMes+'-01',percentual:COM_PCT,venda:0};
+  const vendOpts=S.vendedoras.map(v=>`<option value="${v.id}" ${x.vendedora_id===v.id?'selected':''}>${esc(v.nome)} · ${esc(v.cargo||'Vendedora')}</option>`).join('');
   const meses=[];{const d=new Date();for(let i=0;i<12;i++){meses.push(d.toISOString().slice(0,7));d.setMonth(d.getMonth()-1);}}
-  openModalK('comvend:'+(id||'new'),'Comissão do funcionário',`
+  openModalK('comvend:'+(id||'new'),'Pagamento do funcionário',`
     <div class="field"><label>Funcionário <span class="hint">*</span></label><select id="m_vendedora_id">${vendOpts}</select></div>
     <div class="field"><label>Mês</label><select id="m_competencia">${meses.map(m=>`<option value="${m}-01" ${monthKey(x.competencia)===m?'selected':''}>${fmtMonth(m)}</option>`).join('')}</select></div>
     <div class="field full" id="comTotal" style="background:var(--bg);color:#E4DAC8;padding:12px 15px;border-radius:11px"></div>
-    <div class="field"><label>Venda do mês</label><div class="prefix"><input id="m_venda" type="text" inputmode="decimal" class="moeda" value="${x.venda||''}"></div></div>
-    <div class="field"><label>% Comissão</label><input id="m_percentual" type="number" step="0.001" value="${x.percentual??1.5}"></div>
-    <div class="field"><label>Bônus meta</label><div class="prefix"><input id="m_bonus_meta" type="text" inputmode="decimal" class="moeda" value="${x.bonus_meta||''}"></div></div>
-    <div class="field"><label>Alimentação</label><div class="prefix"><input id="m_alimentacao" type="text" inputmode="decimal" class="moeda" value="${x.alimentacao||''}"></div></div>
-    <div class="field"><label>Transporte</label><div class="prefix"><input id="m_transporte" type="text" inputmode="decimal" class="moeda" value="${x.transporte||''}"></div></div>
-    <div class="field"><label>Desempenho</label><div class="prefix"><input id="m_desempenho" type="text" inputmode="decimal" class="moeda" value="${x.desempenho||''}"></div></div>
-    <div class="field"><label>Pontualidade</label><div class="prefix"><input id="m_pontualidade" type="text" inputmode="decimal" class="moeda" value="${x.pontualidade||''}"></div></div>
-    <div class="field full" style="background:var(--surface);padding:10px 12px;border-radius:9px"><label style="margin-bottom:6px">Divisão por forma de pagamento <span class="hint">(iFood + dinheiro deve somar o total acima)</span></label>
-      <div style="display:flex;gap:10px"><div class="prefix" style="flex:1"><input id="m_pago_ifood" type="text" inputmode="decimal" class="moeda" value="${x.pago_ifood||''}" placeholder="iFood"></div><div class="prefix" style="flex:1"><input id="m_pago_dinheiro" type="text" inputmode="decimal" class="moeda" value="${x.pago_dinheiro||''}" placeholder="Dinheiro"></div></div></div>
+    <div id="vendaBlock" style="display:contents">
+      <div class="field"><label>Venda do mês</label><div class="prefix"><input id="m_venda" type="text" inputmode="decimal" class="moeda" value="${x.venda||''}"></div></div>
+      <div class="field"><label>% do quebrado <span class="hint">(dinheiro)</span></label><input id="m_percentual" type="number" step="0.001" value="${x.percentual??COM_PCT}"></div>
+      <div class="field full"><div style="font-size:12px;color:var(--muted);background:var(--surface);padding:8px 11px;border-radius:9px">Regra: a cada <b>${money0(COM_BLOCO)}</b> vendidos = <b>${money0(COM_VALOR_BLOCO)}</b> de comissão; o que sobra paga <b>${COM_PCT}%</b> em dinheiro.</div></div>
+    </div>
+    <div class="field full"><label>Adicionais / outros valores <span class="hint">(bônus, extras — opcional)</span></label><div class="prefix"><input id="m_bonus_meta" type="text" inputmode="decimal" class="moeda" value="${x.bonus_meta||''}"></div></div>
   `,async()=>{
-    if(!val('m_vendedora_id')){toast('Escolha o funcionário',1);return false;}
-    const comp=val('m_competencia');
-    const row={vendedora_id:val('m_vendedora_id'),competencia:comp,venda:N(val('m_venda')),percentual:N(val('m_percentual'))||1.5,
-      bonus_meta:N(val('m_bonus_meta')),alimentacao:N(val('m_alimentacao')),transporte:N(val('m_transporte')),desempenho:N(val('m_desempenho')),pontualidade:N(val('m_pontualidade')),
-      pago_ifood:N(val('m_pago_ifood')),pago_dinheiro:N(val('m_pago_dinheiro')),empresa_id:ctxDefault()};
+    const vid=val('m_vendedora_id');if(!vid){toast('Escolha o funcionário',1);return false;}
+    const comp=val('m_competencia');const vend=ehVendedora(vid);
+    const venda=vend?N(val('m_venda')):0;const pct=N(val('m_percentual'))||COM_PCT;
+    const k=vend?comVendCalc(venda,pct):{meta:0,dinheiro:0};
+    const row={vendedora_id:vid,competencia:comp,venda,percentual:pct,
+      bonus_meta:N(val('m_bonus_meta')),alimentacao:0,transporte:0,desempenho:0,pontualidade:0,
+      pago_ifood:k.meta,pago_dinheiro:k.dinheiro,empresa_id:ctxDefault()};
     if(id)await dbUpdate('comissoes_vendedoras',id,row);else await dbInsert('comissoes_vendedoras',row);
-    vendMes=monthKey(comp); // garante que a comissão salva aparece (pula pro mês certo)
-    toast('Comissão salva');return true;
+    vendMes=monthKey(comp); // garante que aparece (pula pro mês certo)
+    toast('Pagamento salvo');return true;
   },'','wide');
   wireRecalc();
 }

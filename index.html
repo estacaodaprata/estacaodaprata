@@ -334,7 +334,10 @@ const ICON={
   download:'<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/>',
   extrato:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/>',
   orcamento:'<path d="M12 2a10 10 0 1 0 10 10"/><path d="M12 2v10l8-4A10 10 0 0 0 12 2z"/>',
-  empresa:'<path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/>'
+  empresa:'<path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M9 17h.01M15 9h.01M15 13h.01M15 17h.01"/>',
+  reforma:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-6.6 6.6a1.5 1.5 0 0 0 2.1 2.1l6.6-6.6a4 4 0 0 0 5.4-5.4l-2.3 2.3-2.1-2.1z"/>',
+  viagem:'<path d="M17.8 19.2L16 11l3.5-3.5a2.1 2.1 0 0 0-3-3L13 8 4.8 6.2a.5.5 0 0 0-.5.8l3.5 4-2 2-1.8-.4a.5.5 0 0 0-.5.8L6 17l1.6 2.5a.5.5 0 0 0 .8-.1l-.4-1.8 2-2 4 3.5a.5.5 0 0 0 .8-.5z"/>',
+  pontos:'<path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>'
 };
 const sicon=(n)=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICON[n]||''}</svg>`;
 
@@ -349,7 +352,7 @@ async function dbWhere(table,col,v,order='created_at'){const{data,error}=await S
 async function dbOne(table,id){const{data,error}=await SB.from(table).select('*').eq('id',id).single();if(error)throw error;return data;}
 
 /* cache em memória (recarregado após cada mutação) */
-const S={contas:[],saldos:[],cartoes:[],faturas:[],parcelas:[],transacoes:[],contasPagar:[],contasReceber:[],categorias:[],centros:[],fluxo:[],socios:[],obras:[],fornecedores:[],empreendimentos:[],imoveis:[],proprietarios:[],leads:[],visitas:[],propostas:[],comissoes:[],patrimonio:[],financiamentos:[],empresas:[],orcamentos:[],vendedoras:[]};
+const S={contas:[],saldos:[],cartoes:[],faturas:[],parcelas:[],transacoes:[],contasPagar:[],contasReceber:[],categorias:[],centros:[],fluxo:[],socios:[],obras:[],fornecedores:[],empreendimentos:[],imoveis:[],proprietarios:[],leads:[],visitas:[],propostas:[],comissoes:[],patrimonio:[],financiamentos:[],empresas:[],orcamentos:[],vendedoras:[],reformas:[],viagens:[],pontos:[]};
 const empresaNome=(id)=>{const e=S.empresas.find(x=>x.id===id);return e?e.nome:'—';};
 const empresaCor=(id)=>{const e=S.empresas.find(x=>x.id===id);return e?(e.cor||'#B08A45'):'#B0A08C';};
 const empresaTag=(id)=>{const e=S.empresas.find(x=>x.id===id);return e?`<span class="pill" style="background:${e.cor}22;color:${e.cor}">${esc(e.sufixo||e.nome)}</span>`:'';};
@@ -475,6 +478,8 @@ const NAV=[
   {g:'financeiro',id:'pagar',ic:'pagar',t:'Contas a pagar',sub:'Compromissos e vencimentos'},
   {g:'financeiro',id:'receber',ic:'receber',t:'Contas a receber',sub:'Recebíveis'},
   {g:'pessoal',id:'patrimonio',ic:'patrimonio',t:'Patrimônio',sub:'Bens, dívidas e patrimônio líquido'},
+  {g:'pessoal',id:'reformas',ic:'reforma',t:'Reformas',sub:'Obras de reforma, orçamento e gastos'},
+  {g:'pessoal',id:'viagens',ic:'viagem',t:'Viagens & milhas',sub:'Gastos de viagem e saldo de pontos'},
   {g:'negocio',id:'fornecedores',ic:'fornecedores',t:'Fornecedores',sub:'Conta-corrente e saldo devedor'},
   {g:'negocio',id:'vendedoras',ic:'funcionarios',t:'Funcionários',sub:'Comissões: 1,5% + adicionais'},
   {g:'obras',id:'obras',ic:'obras',t:'Obras',sub:'Construções, gastos e sócios'},
@@ -493,7 +498,7 @@ const NAV=[
   {g:'sistema',id:'usuarios',ic:'usuarios',t:'Usuários',sub:'Permissões de acesso'},
   {g:'sistema',id:'auditoria',ic:'auditoria',t:'Auditoria',sub:'Histórico de alterações'},
 ];
-let ROUTE='painel',detailObra=null,detailForn=null;
+let ROUTE='painel',detailObra=null,detailForn=null,detailReforma=null,detailViagem=null;
 function grupoVisivel(g){if(!g)return true;if(g.tipos==='*')return true;if(CTX==='')return true;/*Geral mostra tudo*/return g.tipos.includes(ctxTipo());}
 function renderNav(){
   const seen={};let html='';
@@ -507,7 +512,7 @@ function renderNav(){
   $('#nav').innerHTML=html;
 }
 function toggleNav(open){$('#sidebar').classList.toggle('open',open);$('#scrim').classList.toggle('show',open);}
-function go(id,arg){ROUTE=id;if(id==='obraDetail')detailObra=arg;if(id==='fornecedorDetail')detailForn=arg;toggleNav(false);window.scrollTo(0,0);renderNav();render();}
+function go(id,arg){ROUTE=id;if(id==='obraDetail')detailObra=arg;if(id==='fornecedorDetail')detailForn=arg;if(id==='reformaDetail')detailReforma=arg;if(id==='viagemDetail')detailViagem=arg;toggleNav(false);window.scrollTo(0,0);renderNav();render();}
 
 let charts=[];
 function clearCharts(){charts.forEach(c=>{try{c.destroy();}catch(e){}});charts=[];}
@@ -519,6 +524,8 @@ function toast(msg,err){const t=$('#toast');t.className='toast'+(err?' err':'');
 async function render(){
   let meta=NAV.find(n=>n.id===ROUTE)||{t:'',sub:''};
   if(ROUTE==='obraDetail')meta={t:'Obra',sub:'Gastos, sócios, etapas e documentação'};
+  if(ROUTE==='reformaDetail')meta={t:'Reforma',sub:'Orçamento, gastos e pagamentos'};
+  if(ROUTE==='viagemDetail')meta={t:'Viagem',sub:'Roteiro de gastos e orçamento'};
   $('#pageTitle').textContent=meta.t;
   const ctxLbl=CTX===OBRAS_CTX?'· Obras':(CTX?('· '+(ctxEmpresa()?ctxEmpresa().nome:'')):'· Geral (consolidado)');
   $('#pageSub').textContent=meta.sub+'  '+ctxLbl;
@@ -550,6 +557,10 @@ async function render(){
     else if(ROUTE==='propostas')await renderPropostas(c);
     else if(ROUTE==='comissoes')await renderComissoes(c);
     else if(ROUTE==='patrimonio')await renderPatrimonio(c);
+    else if(ROUTE==='reformas')await renderReformas(c);
+    else if(ROUTE==='reformaDetail')await renderReformaDetail(c);
+    else if(ROUTE==='viagens')await renderViagens(c);
+    else if(ROUTE==='viagemDetail')await renderViagemDetail(c);
     else if(ROUTE==='relatorios')await renderRelatorios(c);
     else if(ROUTE==='documentos')await renderDocumentos(c);
     else if(ROUTE==='busca')await renderBusca(c);
@@ -1937,6 +1948,303 @@ async function formFinanciamento(id){
     const row={descricao:val('m_descricao'),patrimonio_id:val('m_patrimonio_id')||null,valor_total:n('valor_total')||0,saldo_devedor:n('saldo_devedor')||0,parcela_valor:n('parcela_valor'),dia_vencimento:n('dia_vencimento')};
     if(id)await dbUpdate('financiamentos',id,row);else await dbInsert('financiamentos',row);
     toast('Financiamento salvo');return true;
+  });
+}
+
+/* ================= REFORMAS ================= */
+const STATUS_REF=[['planejamento','Planejamento'],['em_andamento','Em andamento'],['pausada','Pausada'],['concluida','Concluída']];
+const refLabel=(s)=>(STATUS_REF.find(x=>x[0]===s)||[s,s])[1];
+const refPill=(s)=>{const m={planejamento:'blue',em_andamento:'amber',pausada:'gray',concluida:'green'};return `<span class="pill pill-${m[s]||'gray'}">${refLabel(s)}</span>`;};
+const AMBIENTES_REF=['Cozinha','Banheiro','Quarto','Sala','Área externa','Fachada','Elétrica','Hidráulica','Estrutura','Pintura','Mão de obra','Material','Outro'];
+
+async function refItensDe(refId){return (await dbWhere('reforma_itens','reforma_id',refId,'data')).slice().reverse();}
+function refGasto(itens){return sum(itens,i=>N(i.valor));}
+
+async function renderReformas(c){
+  await loadEmpresas();
+  const _mf=moneyFilter();
+  let reformas=await dbList('reformas','created_at',false);
+  if(_mf)reformas=reformas.filter(r=>r.empresa_id===_mf);
+  S.reformas=reformas;
+  // carrega gastos de todas para KPIs e barras
+  const itensAll=await dbList('reforma_itens','data',false).catch(()=>[]);
+  const gastoDe=(id)=>sum(itensAll.filter(i=>i.reforma_id===id),i=>N(i.valor));
+  const pagoDe=(id)=>sum(itensAll.filter(i=>i.reforma_id===id&&i.pago),i=>N(i.valor));
+
+  const ativas=reformas.filter(r=>r.status!=='concluida');
+  const totOrc=sum(reformas,r=>N(r.orcamento));
+  const totGasto=sum(reformas,r=>gastoDe(r.id));
+  const totAPagar=sum(reformas,r=>gastoDe(r.id)-pagoDe(r.id));
+  const saldoOrc=totOrc-totGasto;
+
+  $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formReforma()">${sicon('plus')}Nova reforma</button>`;
+
+  c.innerHTML=`
+    <div class="kpi-grid">
+      ${kpiCard({lbl:'Reformas em andamento',val:ativas.length,sub:reformas.length+' no total',ic:'reforma',tint:'brass'})}
+      ${kpiCard({lbl:'Orçado',val:kmoney(totOrc),ic:'orcamento',tint:'blue'})}
+      ${kpiCard({lbl:'Já gasto',val:kmoney(totGasto),sub:totOrc?(totGasto/totOrc*100).toFixed(0)+'% do orçamento':'',ic:'down',tint:totGasto>totOrc&&totOrc?'red':'teal'})}
+      ${kpiCard({lbl:'Falta pagar',val:kmoney(totAPagar),ic:'pagar',tint:totAPagar>0?'amber':'green'})}
+    </div>
+    <div class="toolbar"><div class="sub" style="color:var(--muted);font-size:12.5px">Saldo do orçamento: <b class="mono ${saldoOrc<0?'neg':'pos'}">${money0(saldoOrc)}</b></div><button class="btn btn-brass btn-sm" style="margin-left:auto" onclick="formReforma()">${sicon('plus')}Nova reforma</button></div>
+    ${reformas.length?`<div class="grid-2">${reformas.map(r=>{
+      const g=gastoDe(r.id),orc=N(r.orcamento),pct=orc?Math.round(g/orc*100):0,over=g>orc&&orc>0,ap=g-pagoDe(r.id);
+      return `<div class="card" style="cursor:pointer" onclick="go('reformaDetail','${r.id}')">
+        <div class="card-h"><h3>${esc(r.nome)}</h3><div class="actions">${refPill(r.status)}</div></div>
+        <div class="card-b">
+          <div class="row-sub" style="margin-bottom:12px">${esc(r.local||'—')}${r.previsao_fim?' · previsão '+fmtDate(r.previsao_fim):''}</div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px"><span>Gasto <b class="mono">${money0(g)}</b></span><span style="color:var(--muted)">de ${orc?money0(orc):'sem orçamento'}</span></div>
+          <div class="prog ${over?'over':''}"><i style="width:${Math.min(100,pct)}%"></i></div>
+          <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:12px;color:var(--muted)">
+            <span>${orc?(over?'estourou '+money0(g-orc):'resta '+money0(orc-g)):pct+'%'}</span>
+            <span>${ap>0?'<b style="color:var(--amber)">falta pagar '+money0(ap)+'</b>':'tudo pago'}</span></div>
+        </div></div>`;}).join('')}</div>`
+    :emptyCard('reforma','Nenhuma reforma cadastrada','Cadastre uma reforma (ex.: "Reforma da cozinha"), defina o orçamento e vá lançando os gastos. O sistema mostra quanto já gastou, quanto falta pagar e se estourou o orçamento.',`<button class="btn btn-brass" onclick="formReforma()">${sicon('plus')}Nova reforma</button>`)}`;
+}
+
+async function formReforma(id){
+  await loadEmpresas();
+  if(!S.imoveis.length)S.imoveis=await dbList('imoveis','titulo').catch(()=>[]);
+  const x=id?await dbOne('reformas',id):{status:'em_andamento',data_inicio:today(),empresa_id:ctxDefault()};
+  const imOpts='<option value="">— nenhum —</option>'+S.imoveis.map(i=>`<option value="${i.id}" ${x.imovel_id===i.id?'selected':''}>${esc(i.titulo)}</option>`).join('');
+  openModalK('reforma:'+(id||'new'),id?'Editar reforma':'Nova reforma',`
+    <div class="field full"><label>Nome da reforma <span class="hint">*</span></label><input id="m_nome" value="${esc(x.nome||'')}" placeholder="Ex.: Reforma da cozinha"></div>
+    <div class="field full"><label>Local / endereço</label><input id="m_local" value="${esc(x.local||'')}" placeholder="Ex.: Apartamento Rua X, 101"></div>
+    <div class="field"><label>Orçamento previsto</label><div class="prefix"><input id="m_orcamento" type="text" inputmode="decimal" class="moeda" value="${x.orcamento||''}"></div></div>
+    <div class="field"><label>Situação</label><select id="m_status">${STATUS_REF.map(([v,l])=>`<option value="${v}" ${x.status===v?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="field"><label>Início</label><input id="m_data_inicio" type="date" value="${(x.data_inicio||'').slice(0,10)}"></div>
+    <div class="field"><label>Previsão de término</label><input id="m_previsao_fim" type="date" value="${(x.previsao_fim||'').slice(0,10)}"></div>
+    <div class="field full"><label>Imóvel vinculado <span class="hint">(opcional)</span></label><select id="m_imovel_id">${imOpts}</select></div>
+    <div class="field full"><label>Observações</label><textarea id="m_observacoes">${esc(x.observacoes||'')}</textarea></div>
+  `,async()=>{
+    if(!val('m_nome')){toast('Informe o nome',1);return false;}
+    const row={nome:val('m_nome'),local:val('m_local'),orcamento:N(val('m_orcamento')),status:val('m_status'),
+      data_inicio:val('m_data_inicio')||null,previsao_fim:val('m_previsao_fim')||null,imovel_id:val('m_imovel_id')||null,
+      observacoes:val('m_observacoes'),empresa_id:id?x.empresa_id:ctxDefault()};
+    if(id)await dbUpdate('reformas',id,row);else await dbInsert('reformas',row);
+    toast('Reforma salva');return true;
+  },'','wide');
+}
+
+async function renderReformaDetail(c){
+  const r=await dbOne('reformas',detailReforma).catch(()=>null);
+  if(!r){go('reformas');return;}
+  const itens=await refItensDe(r.id);
+  const gasto=refGasto(itens),orc=N(r.orcamento),pago=sum(itens.filter(i=>i.pago),i=>N(i.valor)),aPagar=gasto-pago,over=gasto>orc&&orc>0;
+  const atrasados=itens.filter(i=>!i.pago);
+  $('#topbarRight').innerHTML='';
+
+  // agrupa por ambiente
+  const porAmb={};itens.forEach(i=>{const a=i.ambiente||'Outro';porAmb[a]=(porAmb[a]||0)+N(i.valor);});
+  const ambArr=Object.keys(porAmb).map(a=>({a,v:porAmb[a]})).sort((x,y)=>y.v-x.v);
+
+  c.innerHTML=`
+    <button class="btn btn-ghost btn-sm" onclick="go('reformas')" style="margin-bottom:14px">‹ Voltar</button>
+    <div style="display:flex;align-items:flex-start;gap:15px;margin-bottom:16px;flex-wrap:wrap">
+      <div class="kicon tint-brass" style="width:48px;height:48px;border-radius:13px">${sicon('reforma')}</div>
+      <div style="flex:1;min-width:0"><h2 style="font-size:21px">${esc(r.nome)}</h2><div class="row-sub">${esc(r.local||'')} ${refPill(r.status)}</div></div>
+      <button class="btn btn-ghost btn-sm" onclick='formReforma("${r.id}")'>${sicon('edit')}Editar</button>
+    </div>
+    <div class="kpi-grid">
+      ${kpiCard({lbl:'Orçamento',val:kmoney(orc),ic:'orcamento',tint:'blue'})}
+      ${kpiCard({lbl:'Já gasto',val:kmoney(gasto),sub:orc?(over?'estourou '+money0(gasto-orc):'resta '+money0(orc-gasto)):'',ic:'down',tint:over?'red':'teal'})}
+      ${kpiCard({lbl:'Falta pagar',val:kmoney(aPagar),sub:atrasados.length?atrasados.length+' em aberto':'tudo pago',ic:'pagar',tint:aPagar>0?'amber':'green'})}
+      ${kpiCard({lbl:'Itens lançados',val:itens.length,ic:'extrato',tint:'brass'})}
+    </div>
+    <div style="padding:2px 2px 16px"><div class="prog ${over?'over':''}"><i style="width:${orc?Math.min(100,Math.round(gasto/orc*100)):0}%"></i></div></div>
+    <div class="grid-2" style="margin-bottom:18px">
+      <div class="card" style="grid-column:1/-1">
+        <div class="card-h"><h3>Gastos da reforma</h3><span class="sub">material, mão de obra e serviços</span><div class="actions"><button class="btn btn-brass btn-sm" onclick="formItemReforma('${r.id}')">${sicon('plus')}Novo gasto</button></div></div>
+        <div class="tbl-wrap">${itens.length?`<table class="data"><thead><tr><th>Data</th><th>Descrição</th><th>Ambiente</th><th class="num">Valor</th><th>Status</th><th></th><th></th></tr></thead><tbody>
+          ${itens.map(i=>`<tr>
+            <td style="width:92px"><div class="mono" style="font-size:12.5px">${fmtDate(i.data)}</div></td>
+            <td><div class="row-title">${esc(i.descricao||'Gasto')}</div></td>
+            <td><span class="pill pill-gray">${esc(i.ambiente||'—')}</span></td>
+            <td class="num"><b>${money(i.valor)}</b></td>
+            <td>${i.pago?`<span class="pill pill-green">pago ${i.pago_em?fmtDate(i.pago_em):''}</span>`:'<span class="pill pill-amber">a pagar</span>'}</td>
+            <td style="width:1%;white-space:nowrap">${i.pago?'':`<button class="btn btn-ghost btn-sm" onclick="pagarItemReforma('${i.id}')">${sicon('check')}Pagar</button>`}</td>
+            <td><div class="t-actions"><button class="icon-btn" onclick='formItemReforma("${r.id}","${i.id}")'>${sicon('edit')}</button><button class="icon-btn del" onclick='delItemReforma("${i.id}")'>${sicon('trash')}</button></div></td></tr>`).join('')}
+        </tbody></table>`:`<div class="empty">${sicon('reforma')}<h3>Nenhum gasto lançado</h3><p>Lance cada compra de material, serviço ou mão de obra. Marque como pago quando quitar.</p><button class="btn btn-brass" onclick="formItemReforma('${r.id}')">${sicon('plus')}Novo gasto</button></div>`}</div></div>
+      ${ambArr.length?`<div class="card" style="grid-column:1/-1"><div class="card-h"><h3>Gasto por ambiente</h3></div><div class="card-b">
+        ${ambArr.map(x=>`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px"><span>${esc(x.a)}</span><span class="mono" style="font-weight:600">${money0(x.v)}</span></div><div class="prog"><i style="width:${gasto?x.v/gasto*100:0}%"></i></div></div>`).join('')}
+      </div></div>`:''}
+    </div>
+    ${r.observacoes?`<div class="card"><div class="card-b" style="font-size:13px;color:var(--muted)">${esc(r.observacoes)}</div></div>`:''}`;
+}
+
+async function formItemReforma(refId,id){
+  if(!S.contas.length)await reloadContas();
+  const x=id?await dbOne('reforma_itens',id):{data:today(),ambiente:'Material'};
+  const ambOpts=AMBIENTES_REF.map(a=>`<option value="${a}" ${x.ambiente===a?'selected':''}>${a}</option>`).join('');
+  openModalK('refitem:'+(id||'new'),id?'Editar gasto':'Novo gasto',`
+    <div class="field full"><label>Descrição <span class="hint">*</span></label><input id="m_descricao" value="${esc(x.descricao||'')}" placeholder="Ex.: Porcelanato 60x60 (20 cx)"></div>
+    <div class="field"><label>Valor <span class="hint">*</span></label><div class="prefix"><input id="m_valor" type="text" inputmode="decimal" class="moeda" value="${x.valor||''}"></div></div>
+    <div class="field"><label>Ambiente / tipo</label><select id="m_ambiente">${ambOpts}</select></div>
+    <div class="field"><label>Data</label><input id="m_data" type="date" value="${(x.data||today()).slice(0,10)}"></div>
+    <div class="field"><label style="display:flex;align-items:center;gap:8px;font-weight:500;margin-top:24px"><input type="checkbox" id="m_pago" style="width:auto" ${x.pago?'checked':''}> Já está pago</label></div>
+    ${id?'':`<div class="field full" style="background:var(--surface);padding:12px 14px;border-radius:10px"><label style="display:flex;align-items:center;gap:8px;font-weight:500"><input type="checkbox" id="m_lancar_caixa" style="width:auto"> Lançar a saída no caixa agora</label>
+      <select id="m_conta_caixa" style="margin-top:8px">${S.contas.map(cc=>`<option value="${cc.id}">${esc(cc.banco+' · '+cc.nome)}</option>`).join('')||'<option value="">sem contas</option>'}</select></div>`}
+  `,async()=>{
+    const v=N(val('m_valor'));if(!val('m_descricao')||!v){toast('Descrição e valor são obrigatórios',1);return false;}
+    const pago=$('#m_pago')&&$('#m_pago').checked;
+    const row={reforma_id:refId,descricao:val('m_descricao'),valor:v,ambiente:val('m_ambiente'),data:val('m_data')||today(),pago:pago,pago_em:pago?today():null,empresa_id:ctxDefault()};
+    if(id)await dbUpdate('reforma_itens',id,row);
+    else{
+      await dbInsert('reforma_itens',row);
+      if($('#m_lancar_caixa')&&$('#m_lancar_caixa').checked&&val('m_conta_caixa')){
+        await dbInsert('transacoes',{tipo:'saida',valor:v,data:val('m_data')||today(),descricao:'Reforma: '+val('m_descricao'),conta_id:val('m_conta_caixa'),situacao:'pago',forma:'transferencia',origem_tipo:'reforma'});
+      }
+    }
+    toast('Gasto salvo');return true;
+  });
+}
+async function pagarItemReforma(id){await dbUpdate('reforma_itens',id,{pago:true,pago_em:today()});toast('Gasto marcado como pago');render();}
+async function delItemReforma(id){if(!confirm('Excluir este gasto?'))return;await dbDelete('reforma_itens',id);toast('Gasto excluído');render();}
+
+/* ================= VIAGENS & MILHAS ================= */
+const STATUS_VIAGEM=[['planejada','Planejada'],['em_andamento','Em andamento'],['concluida','Concluída']];
+const vgLabel=(s)=>(STATUS_VIAGEM.find(x=>x[0]===s)||[s,s])[1];
+const vgPill=(s)=>{const m={planejada:'blue',em_andamento:'amber',concluida:'green'};return `<span class="pill pill-${m[s]||'gray'}">${vgLabel(s)}</span>`;};
+const CAT_VIAGEM=['Passagem','Hospedagem','Alimentação','Transporte','Passeio','Compras','Outro'];
+
+async function vgGastosDe(id){return (await dbWhere('viagem_gastos','viagem_id',id,'data')).slice().reverse();}
+
+async function renderViagens(c){
+  await loadEmpresas();
+  const _mf=moneyFilter();
+  let viagens=await dbList('viagens','created_at',false);
+  if(_mf)viagens=viagens.filter(v=>v.empresa_id===_mf);
+  S.viagens=viagens;
+  const gastosAll=await dbList('viagem_gastos','data',false).catch(()=>[]);
+  const gastoDe=(id)=>sum(gastosAll.filter(g=>g.viagem_id===id),g=>N(g.valor));
+  S.pontos=await dbList('pontos','programa').catch(()=>[]);
+
+  const futuras=viagens.filter(v=>v.status!=='concluida');
+  const totOrc=sum(viagens,v=>N(v.orcamento));
+  const totGasto=sum(viagens,v=>gastoDe(v.id));
+  const totPontos=sum(S.pontos,p=>N(p.saldo));
+
+  $('#topbarRight').innerHTML=`<button class="btn btn-brass" onclick="formViagem()">${sicon('plus')}Nova viagem</button>`;
+
+  c.innerHTML=`
+    <div class="kpi-grid">
+      ${kpiCard({lbl:'Viagens planejadas',val:futuras.length,sub:viagens.length+' no total',ic:'viagem',tint:'brass'})}
+      ${kpiCard({lbl:'Orçado',val:kmoney(totOrc),ic:'orcamento',tint:'blue'})}
+      ${kpiCard({lbl:'Gasto em viagens',val:kmoney(totGasto),ic:'down',tint:'teal'})}
+      ${kpiCard({lbl:'Saldo de pontos/milhas',val:totPontos.toLocaleString('pt-BR'),sub:S.pontos.length+' programa(s)',ic:'pontos',tint:'amber'})}
+    </div>
+    <div class="toolbar"><h3 style="font-size:15px;margin:0">Viagens</h3><button class="btn btn-brass btn-sm" style="margin-left:auto" onclick="formViagem()">${sicon('plus')}Nova viagem</button></div>
+    ${viagens.length?`<div class="grid-2" style="margin-bottom:18px">${viagens.map(v=>{
+      const g=gastoDe(v.id),orc=N(v.orcamento),pct=orc?Math.round(g/orc*100):0,over=g>orc&&orc>0;
+      return `<div class="card" style="cursor:pointer" onclick="go('viagemDetail','${v.id}')">
+        <div class="card-h"><h3>${esc(v.titulo)}</h3><div class="actions">${vgPill(v.status)}</div></div>
+        <div class="card-b">
+          <div class="row-sub" style="margin-bottom:12px">${esc(v.destino||'')}${v.data_ida?' · '+fmtDate(v.data_ida):''}${v.data_volta?' → '+fmtDate(v.data_volta):''}</div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px"><span>Gasto <b class="mono">${money0(g)}</b></span><span style="color:var(--muted)">de ${orc?money0(orc):'sem orçamento'}</span></div>
+          <div class="prog ${over?'over':''}"><i style="width:${Math.min(100,pct)}%"></i></div>
+          <div style="margin-top:9px;font-size:12px;color:var(--muted)">${orc?(over?'estourou '+money0(g-orc):'resta '+money0(orc-g)):pct+'%'}</div>
+        </div></div>`;}).join('')}</div>`
+    :emptyCard('viagem','Nenhuma viagem cadastrada','Cadastre uma viagem com destino, datas e orçamento. Depois lance os gastos (passagem, hospedagem, alimentação) e acompanhe quanto já gastou.',`<button class="btn btn-brass" onclick="formViagem()">${sicon('plus')}Nova viagem</button>`)}
+
+    <div class="card"><div class="card-h"><h3>Milhas &amp; pontos</h3><span class="sub">saldo por programa de fidelidade</span><div class="actions"><button class="btn btn-ghost btn-sm" onclick="formPonto()">${sicon('plus')}Programa</button></div></div>
+      <div class="tbl-wrap">${S.pontos.length?`<table class="data"><thead><tr><th>Programa</th><th class="num">Saldo (pontos)</th><th>Validade</th><th>Observação</th><th></th></tr></thead><tbody>
+        ${S.pontos.map(p=>{const d=p.validade?daysUntil(p.validade):null;return `<tr>
+          <td class="row-title">${esc(p.programa)}</td>
+          <td class="num"><b class="mono">${N(p.saldo).toLocaleString('pt-BR')}</b></td>
+          <td>${p.validade?`<span class="mono" style="font-size:12.5px">${fmtDate(p.validade)}</span> ${d!==null&&d<=60?dueBadge(d):''}`:'<span class="row-sub">—</span>'}</td>
+          <td class="row-sub">${esc(p.observacoes||'')}</td>
+          <td><div class="t-actions"><button class="icon-btn" onclick='formPonto("${p.id}")'>${sicon('edit')}</button><button class="icon-btn del" onclick='delReg("pontos","${p.id}","Programa")'>${sicon('trash')}</button></div></td></tr>`;}).join('')}
+      </tbody></table>`:`<div class="empty" style="padding:30px">${sicon('pontos')}<h3 style="font-size:15px">Nenhum programa cadastrado</h3><p>Cadastre Smiles, Latam Pass, TudoAzul, Livelo etc. com o saldo de pontos e a validade — o sistema avisa quando os pontos estão perto de vencer.</p><button class="btn btn-brass" onclick="formPonto()">${sicon('plus')}Programa</button></div>`}</div></div>`;
+}
+
+async function formViagem(id){
+  await loadEmpresas();
+  const x=id?await dbOne('viagens',id):{status:'planejada',empresa_id:ctxDefault()};
+  openModalK('viagem:'+(id||'new'),id?'Editar viagem':'Nova viagem',`
+    <div class="field full"><label>Título <span class="hint">*</span></label><input id="m_titulo" value="${esc(x.titulo||'')}" placeholder="Ex.: Férias em Portugal"></div>
+    <div class="field full"><label>Destino</label><input id="m_destino" value="${esc(x.destino||'')}" placeholder="Ex.: Lisboa e Porto"></div>
+    <div class="field"><label>Ida</label><input id="m_data_ida" type="date" value="${(x.data_ida||'').slice(0,10)}"></div>
+    <div class="field"><label>Volta</label><input id="m_data_volta" type="date" value="${(x.data_volta||'').slice(0,10)}"></div>
+    <div class="field"><label>Orçamento</label><div class="prefix"><input id="m_orcamento" type="text" inputmode="decimal" class="moeda" value="${x.orcamento||''}"></div></div>
+    <div class="field"><label>Situação</label><select id="m_status">${STATUS_VIAGEM.map(([v,l])=>`<option value="${v}" ${x.status===v?'selected':''}>${l}</option>`).join('')}</select></div>
+    <div class="field full"><label>Observações</label><textarea id="m_observacoes">${esc(x.observacoes||'')}</textarea></div>
+  `,async()=>{
+    if(!val('m_titulo')){toast('Informe o título',1);return false;}
+    const row={titulo:val('m_titulo'),destino:val('m_destino'),data_ida:val('m_data_ida')||null,data_volta:val('m_data_volta')||null,
+      orcamento:N(val('m_orcamento')),status:val('m_status'),observacoes:val('m_observacoes'),empresa_id:id?x.empresa_id:ctxDefault()};
+    if(id)await dbUpdate('viagens',id,row);else await dbInsert('viagens',row);
+    toast('Viagem salva');return true;
+  },'','wide');
+}
+
+async function renderViagemDetail(c){
+  const v=await dbOne('viagens',detailViagem).catch(()=>null);
+  if(!v){go('viagens');return;}
+  const gastos=await vgGastosDe(v.id);
+  const gasto=sum(gastos,g=>N(g.valor)),orc=N(v.orcamento),over=gasto>orc&&orc>0;
+  $('#topbarRight').innerHTML='';
+  const porCat={};gastos.forEach(g=>{const k=g.categoria||'Outro';porCat[k]=(porCat[k]||0)+N(g.valor);});
+  const catArr=Object.keys(porCat).map(k=>({k,v:porCat[k]})).sort((a,b)=>b.v-a.v);
+  c.innerHTML=`
+    <button class="btn btn-ghost btn-sm" onclick="go('viagens')" style="margin-bottom:14px">‹ Voltar</button>
+    <div style="display:flex;align-items:flex-start;gap:15px;margin-bottom:16px;flex-wrap:wrap">
+      <div class="kicon tint-brass" style="width:48px;height:48px;border-radius:13px">${sicon('viagem')}</div>
+      <div style="flex:1;min-width:0"><h2 style="font-size:21px">${esc(v.titulo)}</h2><div class="row-sub">${esc(v.destino||'')} ${vgPill(v.status)}${v.data_ida?' · '+fmtDate(v.data_ida):''}${v.data_volta?' → '+fmtDate(v.data_volta):''}</div></div>
+      <button class="btn btn-ghost btn-sm" onclick='formViagem("${v.id}")'>${sicon('edit')}Editar</button>
+    </div>
+    <div class="kpi-grid">
+      ${kpiCard({lbl:'Orçamento',val:kmoney(orc),ic:'orcamento',tint:'blue'})}
+      ${kpiCard({lbl:'Gasto',val:kmoney(gasto),sub:orc?(over?'estourou '+money0(gasto-orc):'resta '+money0(orc-gasto)):'',ic:'down',tint:over?'red':'teal'})}
+      ${kpiCard({lbl:'Lançamentos',val:gastos.length,ic:'extrato',tint:'brass'})}
+    </div>
+    <div style="padding:2px 2px 16px"><div class="prog ${over?'over':''}"><i style="width:${orc?Math.min(100,Math.round(gasto/orc*100)):0}%"></i></div></div>
+    <div class="grid-2" style="margin-bottom:18px">
+      <div class="card" style="grid-column:1/-1">
+        <div class="card-h"><h3>Gastos da viagem</h3><div class="actions"><button class="btn btn-brass btn-sm" onclick="formGastoViagem('${v.id}')">${sicon('plus')}Novo gasto</button></div></div>
+        <div class="tbl-wrap">${gastos.length?`<table class="data"><thead><tr><th>Data</th><th>Descrição</th><th>Categoria</th><th class="num">Valor</th><th></th></tr></thead><tbody>
+          ${gastos.map(g=>`<tr>
+            <td style="width:92px"><div class="mono" style="font-size:12.5px">${fmtDate(g.data)}</div></td>
+            <td><div class="row-title">${esc(g.descricao||'Gasto')}</div></td>
+            <td><span class="pill pill-gray">${esc(g.categoria||'—')}</span></td>
+            <td class="num"><b>${money(g.valor)}</b></td>
+            <td><div class="t-actions"><button class="icon-btn" onclick='formGastoViagem("${v.id}","${g.id}")'>${sicon('edit')}</button><button class="icon-btn del" onclick='delGastoViagem("${g.id}")'>${sicon('trash')}</button></div></td></tr>`).join('')}
+        </tbody></table>`:`<div class="empty">${sicon('viagem')}<h3>Nenhum gasto lançado</h3><p>Lance passagens, hospedagem, alimentação e passeios para acompanhar o orçamento da viagem.</p><button class="btn btn-brass" onclick="formGastoViagem('${v.id}')">${sicon('plus')}Novo gasto</button></div>`}</div></div>
+      ${catArr.length?`<div class="card" style="grid-column:1/-1"><div class="card-h"><h3>Gasto por categoria</h3></div><div class="card-b">
+        ${catArr.map(x=>`<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px"><span>${esc(x.k)}</span><span class="mono" style="font-weight:600">${money0(x.v)}</span></div><div class="prog"><i style="width:${gasto?x.v/gasto*100:0}%"></i></div></div>`).join('')}
+      </div></div>`:''}
+    </div>
+    ${v.observacoes?`<div class="card"><div class="card-b" style="font-size:13px;color:var(--muted)">${esc(v.observacoes)}</div></div>`:''}`;
+}
+
+async function formGastoViagem(vgId,id){
+  const x=id?await dbOne('viagem_gastos',id):{data:today(),categoria:'Alimentação'};
+  const catOpts=CAT_VIAGEM.map(ca=>`<option value="${ca}" ${x.categoria===ca?'selected':''}>${ca}</option>`).join('');
+  openModalK('vggasto:'+(id||'new'),id?'Editar gasto':'Novo gasto',`
+    <div class="field full"><label>Descrição <span class="hint">*</span></label><input id="m_descricao" value="${esc(x.descricao||'')}" placeholder="Ex.: Hotel 3 noites"></div>
+    <div class="field"><label>Valor <span class="hint">*</span></label><div class="prefix"><input id="m_valor" type="text" inputmode="decimal" class="moeda" value="${x.valor||''}"></div></div>
+    <div class="field"><label>Categoria</label><select id="m_categoria">${catOpts}</select></div>
+    <div class="field"><label>Data</label><input id="m_data" type="date" value="${(x.data||today()).slice(0,10)}"></div>
+  `,async()=>{
+    const vv=N(val('m_valor'));if(!val('m_descricao')||!vv){toast('Descrição e valor são obrigatórios',1);return false;}
+    const row={viagem_id:vgId,descricao:val('m_descricao'),valor:vv,categoria:val('m_categoria'),data:val('m_data')||today()};
+    if(id)await dbUpdate('viagem_gastos',id,row);else await dbInsert('viagem_gastos',row);
+    toast('Gasto salvo');return true;
+  });
+}
+async function delGastoViagem(id){if(!confirm('Excluir este gasto?'))return;await dbDelete('viagem_gastos',id);toast('Gasto excluído');render();}
+
+async function formPonto(id){
+  const x=id?await dbOne('pontos',id):{};
+  openModalK('ponto:'+(id||'new'),id?'Editar programa':'Novo programa',`
+    <div class="field full"><label>Programa <span class="hint">*</span></label><input id="m_programa" value="${esc(x.programa||'')}" placeholder="Ex.: Smiles, Latam Pass, Livelo"></div>
+    <div class="field"><label>Saldo (pontos)</label><input id="m_saldo" type="number" step="1" value="${x.saldo??''}" placeholder="0"></div>
+    <div class="field"><label>Validade</label><input id="m_validade" type="date" value="${(x.validade||'').slice(0,10)}"></div>
+    <div class="field full"><label>Observação</label><input id="m_observacoes" value="${esc(x.observacoes||'')}" placeholder="Ex.: expira o lote mais antigo"></div>
+  `,async()=>{
+    if(!val('m_programa')){toast('Informe o programa',1);return false;}
+    const row={programa:val('m_programa'),saldo:N(val('m_saldo')),validade:val('m_validade')||null,observacoes:val('m_observacoes')};
+    if(id)await dbUpdate('pontos',id,row);else await dbInsert('pontos',row);
+    toast('Programa salvo');return true;
   });
 }
 
